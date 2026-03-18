@@ -1,4 +1,4 @@
-from config.config import settings as master_settings
+from backend.config.config import settings as master_settings
 
 # This file aliases the master settings to maintain relative imports within the dutch sub-app
 dutch_settings = master_settings

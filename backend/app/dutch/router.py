@@ -10,7 +10,7 @@ from datetime import datetime
 from fastapi.responses import FileResponse
 
 from backend.app.dutch.core.database import get_session
-from backend.app.dutch.schema.schemas import ExerciseContent
+from backend.app.dutch.schema.schemas import ExerciseContent, ExerciseContentReceive
 from backend.app.dutch.service.llm_service import LocalLLMService
 from backend.app.dutch.service.evaluator import EvaluatorService
 from backend.base.asr import ASRService
@@ -50,8 +50,24 @@ async def get_exercise(category: str, theme: str = "Dagelijkse routine"):
     
     return exercise
 
+@router.post("/evaluate/writing/improve")
 @router.post("/evaluate/writing")
-async def evaluate_writing(exercise: ExerciseContent, session: Session = Depends(get_session)):
+async def evaluate_writing(payload: ExerciseContentReceive, session: Session = Depends(get_session)):
+    # Map frontend aliases
+    data_dict = payload.dict()
+    if payload.text and not payload.user_answer:
+        data_dict["user_answer"] = payload.text
+    if payload.prompt and not payload.question:
+        data_dict["question"] = payload.prompt
+    if payload.date and not payload.date_completed:
+        data_dict["date_completed"] = payload.date
+    
+    # Remove aliases before creating SQLModel
+    for k in ["text", "prompt", "date"]:
+        data_dict.pop(k, None)
+    
+    exercise = ExerciseContent(**data_dict)
+
     # 1. Rule-based evaluation
     rule_results = evaluator_service.evaluate_writing(exercise.user_answer)
     
@@ -115,8 +131,9 @@ async def evaluate_speaking(
         "exercise_id": result.id
     }
 
+@router.get("/dashboard/{user_id}")
 @router.get("/dashboard")
-async def get_dashboard(session: Session = Depends(get_session)):
+async def get_dashboard(user_id: Optional[str] = None, session: Session = Depends(get_session)):
     stmt = select(ExerciseContent).where(ExerciseContent.status == "completed").order_by(ExerciseContent.updated_at.desc()).limit(30)
     history = session.exec(stmt).all()
     

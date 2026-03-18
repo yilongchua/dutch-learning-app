@@ -60,3 +60,4 @@ data/app/*
 
 # zrok
 zrok/**/*.log
+fastapi_env/

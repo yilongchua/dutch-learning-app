@@ -54,8 +54,8 @@ app.add_middleware(
 )
 
 # Mount Routers
-app.include_router(dutch_router, prefix="/api/dutch")
-app.include_router(news_router, prefix="/api/news")
+app.include_router(dutch_router, prefix="")
+app.include_router(news_router, prefix="")
 app.include_router(graphics_generation_router, prefix="/api/graphics_generation", tags=["Graphics Generation"])
 
 @app.get("/")
@@ -67,4 +67,4 @@ async def root():
     }
 
 if __name__ == "__main__":
-    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8010, reload=True)

@@ -2,7 +2,7 @@ from sqlmodel import SQLModel, Field, Column, JSON
 from sqlalchemy.types import TypeDecorator
 from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
-from schema.search import SearchResult, SearchItem
+from backend.schema.search import SearchResult, SearchItem
 
 
 class PydanticJSONList(TypeDecorator):

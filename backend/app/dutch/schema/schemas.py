@@ -27,6 +27,7 @@ class ExerciseContentBase(SQLModel):
     audio_url: str = Field(default="", description="audio url for speaking exercise")
     
     user_answer: str = Field(default="", description="User Answer")
+    
     score: int = Field(default=0, description="score of user answer")
     score_breakdown: str = Field(default="", description="score_breakdown of user answer")
     improved_text: str = Field(default="", description="improved text for user answer")
@@ -43,6 +44,12 @@ class ExerciseContent(ExerciseContentBase, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class ExerciseContentReceive(ExerciseContentBase):
+    """Handle incoming frontend data with aliases"""
+    text: Optional[str] = None
+    prompt: Optional[str] = None
+    date: Optional[str] = None
 
 class ExerciseContentRead(ExerciseContentBase):
     id: int

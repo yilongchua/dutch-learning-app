@@ -1,9 +1,9 @@
 import asyncio
-from base.searxng_service import SearxngService
-from base.page_extraction import PageExtractionService
-from schema.search import SearchItem, SearchResult
-from schema.response_format import ArticleExtracted
-from base.llm_base import LLMBase
+from backend.base.searxng_service import SearxngService
+from backend.base.page_extraction import PageExtractionService
+from backend.schema.search import SearchItem, SearchResult
+from backend.schema.response_format import ArticleExtracted
+from backend.base.llm_base import LLMBase
 
 class WebSearchService:
     """Higher-level pipeline to perform searches and extract clean content from results"""

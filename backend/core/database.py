@@ -1,5 +1,5 @@
 from sqlmodel import SQLModel, create_engine, Session
-from config.config import settings
+from backend.config.config import settings
 
 # Create engine; echo=False for normal operation
 engine = create_engine(

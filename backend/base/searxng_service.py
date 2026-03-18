@@ -2,8 +2,8 @@ from pathlib import Path
 import httpx, os, re, requests
 from datetime import datetime
 from typing import List, Dict, Any
-from schema.search import SearchItem, SearchResult
-from config.config import settings
+from backend.schema.search import SearchItem, SearchResult
+from backend.config.config import settings
 class SearxngService:
     def __init__(self):
         self.base_url = settings.SEARXNG_URL
@@ -11,10 +11,14 @@ class SearxngService:
         os.makedirs(self.output_folder, exist_ok=True)
     
     async def searchApi(self, payload: dict, num_results: int = 5) -> SearchResult:
+        if settings.SEARXNG_SECRET:
+            payload["secret_key"] = settings.SEARXNG_SECRET
         search_result = SearchResult()
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(self.base_url,params=payload,timeout=30.0)
+                headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"}
+                # Use POST as configured in settings.yml
+                response = await client.post(self.base_url, data=payload, timeout=30.0, headers=headers)
                 if response.status_code == 200:
                     data = response.json()
                     results = data.get("results", [])

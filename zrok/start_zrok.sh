@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Configuration
-BACKEND_PORT=8000
+BACKEND_PORT=8010
 FRONTEND_PORT=5173
 BACKEND_NAME="dutchb1api"
 FRONTEND_NAME="dutchb1app"

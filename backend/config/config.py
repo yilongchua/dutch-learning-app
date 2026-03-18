@@ -36,17 +36,21 @@ class Settings(BaseSettings):
 
     # API Keys / External Services
     COMFYUI_API_URL: str = Field(
-        default="http://127.0.0.1:8188",
+        default="http://192.168.1.21:8188",
         env="COMFYUI_API_URL"
     )
     SEARXNG_URL: str = Field(
-        default="http://localhost:8080/search",
+        default="http://localhost:8888/search",
         env="SEARXNG_URL"
+    )
+    SEARXNG_SECRET: Optional[str] = Field(
+        default=None,
+        env="SEARXNG_SERECT"
     )
     
     # LLM Settings
     LOCAL_LLM_URL: str = Field(
-        default="http://localhost:1234/v1",
+        default="http://192.168.1.21:1234/v1",
         env="LOCAL_LLM_URL"
     )
     MODEL: str = Field(
@@ -56,7 +60,7 @@ class Settings(BaseSettings):
 
     # Directories
     COMFYUI_DIR: str = Field(
-        default="/Users/ryan_chua/Desktop/comfyUI",
+        default="/Volumes/comfyUI/output",
         env="COMFYUI_DIR"
     )
     IMAGE_DIR: str = Field(
@@ -68,7 +72,7 @@ class Settings(BaseSettings):
         env="AUDIO_DIR"
     )
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 settings = Settings()
 

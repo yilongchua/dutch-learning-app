@@ -29,11 +29,16 @@ class LLMBase:
     def _pick_first_responsive(urls:list[str]) -> str:
         for url in urls:
             try:
-                httpx.head(url, timeout=1.0)
+                # Import here to avoid circular imports / keep it local
+                import httpx
+                # HEAD might not be supported by all LLM servers, use GET or just try-catch the connection
+                httpx.get(url, timeout=1.0)
                 return url
-            except Exception:
+            except Exception as e:
+                print(f"Warning: URL {url} did not respond: {e}")
                 continue
-        raise RuntimeError("None of the configured LLM URLs responded")
+        print("Warning: None of the configured LLM URLs responded. Using the first one as default.")
+        return urls[0] # Return the first one instead of crashing
     def render_prompt(self, template_name: str, **kwargs) -> str:
         """Render Jinja prompt."""
         template = self.env.get_template(f"{template_name}.j2")

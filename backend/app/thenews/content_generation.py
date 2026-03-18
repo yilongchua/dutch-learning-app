@@ -17,7 +17,7 @@ class ContentGenerator:
     Complete Content Generation Pipeline Orchestrator.
     Handles: Question Gen -> News Gen (Per Question) -> Image Gen -> Translation/Restructure -> Unified NewsItem.
     """
-    def __init__(self, theme_file: str = "../data/theme.json"):
+    def __init__(self, theme_file: str = "../../data/theme.json"):
         self.theme_file = theme_file
         init_db()
         self.web_search = WebSearchService()

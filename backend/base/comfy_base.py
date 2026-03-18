@@ -1,6 +1,6 @@
 import json, os, httpx, random
 from typing import Any, Optional, Dict
-from config.config import settings
+from backend.config.config import settings
 from pathlib import Path
 
 class ComfyUIService:
