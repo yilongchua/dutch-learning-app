@@ -1,0 +1,17 @@
+Evaluate the following Dutch B1 speaking exercise response.
+
+Situation (Prompt): {{ prompt }}
+Key points that should have been covered: 
+{% for kw in keywords %}
+- {{ kw.dutch }} ({{ kw.english }})
+{% endfor %}
+
+Student's Transcription: "{{ transcription }}"
+
+Provide a structured evaluation in JSON format with:
+1. "score": An integer from 0-100 reflecting fluency, correctness, and coverage of key points.
+2. "feedback": Detailed observations about pronunciation (based on transcription), grammar, and vocabulary usage.
+3. "model_answer": A natural, professional B1-level response to the prompt.
+4. "improvement_tips": Specific advice on how to improve.
+
+The output must be ONLY the JSON object.

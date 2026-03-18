@@ -1,0 +1,70 @@
+import sys
+import os
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+
+# Ensure the project root is in sys.path
+# We add the parent directory so that 'backend.' imports work correctly
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from backend.config.config import settings
+from backend.app.dutch.router import router as dutch_router
+from backend.app.thenews.main import router as news_router
+from backend.app.thenews.schema.news_item import NewsItem
+from backend.app.dutch.schema.schemas import ExerciseContent
+from backend.app.dutch.core.database import init_db as init_dutch_db
+from backend.app.thenews.core.database import init_db as init_news_db
+from backend.app.graphics_generation.router import router as graphics_generation_router
+from backend.app.graphics_generation.core.database import init_db as init_graphics_db
+
+# Ensure all models are registered in SQLModel's metadata
+# We import them above to trigger the registration
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Initialize Databases
+    print(f"Initializing Dutch DB at {settings.DUTCH_DB_URL}")
+    init_dutch_db()
+    print(f"Initializing News DB at {settings.THENEWS_DB_URL}")
+    init_news_db()
+    
+    print(f"Initializing Graphics Generation DB at {settings.GRAPHICS_GENERATION_DB_URL}")
+    init_graphics_db()
+    
+    # Create necessary folders
+    os.makedirs(settings.IMAGE_DIR, exist_ok=True)
+    os.makedirs(settings.AUDIO_DIR, exist_ok=True)
+    
+    yield
+
+app = FastAPI(
+    title=settings.APP_NAME,
+    lifespan=lifespan
+)
+
+# CORS Middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # Adjust for production
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Mount Routers
+app.include_router(dutch_router, prefix="/api/dutch")
+app.include_router(news_router, prefix="/api/news")
+app.include_router(graphics_generation_router, prefix="/api/graphics_generation", tags=["Graphics Generation"])
+
+@app.get("/")
+async def root():
+    return {
+        "message": "Welcome to the Unified YL Learning App API",
+        "apps": ["dutch", "news", "graphics_generation"],
+        "status": "online"
+    }
+
+if __name__ == "__main__":
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)

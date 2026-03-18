@@ -1,0 +1,317 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Send, Plus, Image as ImageIcon, Video, Trash2, Loader2, Wand2 } from 'lucide-react';
+import { graphicsGenerationApi, GraphicsItem, COMFY_URL } from '~/services/graphicsGenerationApi';
+
+function MediaDisplay({ item, onDelete }: { item: GraphicsItem, onDelete: (id: number) => void }) {
+  const [actualUrl, setActualUrl] = useState<string | null>(null);
+  const [isError, setIsError] = useState(false);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    const promptId = item.media_url;
+
+    const check = async () => {
+      try {
+        const statusData = await graphicsGenerationApi.checkStatus(promptId);
+        if (statusData && !statusData.status && Object.keys(statusData).length > 0) {
+          // It's likely the outputs dictionary
+          const nodeKeys = Object.keys(statusData);
+          if (nodeKeys.length > 0) {
+            const firstNode = statusData[nodeKeys[nodeKeys.length - 1]];
+            const mediaList = firstNode.images || firstNode.gifs || firstNode.videos;
+            if (mediaList && mediaList.length > 0) {
+              const media = mediaList[0];
+              const url = `${COMFY_URL}/view?filename=${media.filename}&type=${media.type}&subfolder=${media.subfolder}`;
+              setActualUrl(url);
+              clearInterval(interval);
+            }
+          }
+        } else if (statusData && statusData.status === 'error') {
+          setIsError(true);
+          clearInterval(interval);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    if (promptId && !promptId.includes('view?filename=')) {
+      // it's a prompt id, we should poll
+      check();
+      interval = setInterval(check, 3000);
+    } else {
+      setActualUrl(promptId);
+    }
+
+    return () => clearInterval(interval);
+  }, [item.media_url]);
+
+  return (
+    <div style={{
+      display: 'flex', flexDirection: 'column', gap: '8px',
+      background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '16px',
+      border: '1px solid var(--glass-border)', position: 'relative',
+      width: '100%', maxWidth: '600px', alignSelf: 'center'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ flex: 1 }}>
+          <p style={{ margin: 0, fontWeight: 600, color: 'var(--text-light)', fontSize: '0.95rem' }}>{item.original_prompt}</p>
+          {item.improved_prompt && item.improved_prompt !== item.original_prompt && (
+            <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#a78bfa', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <Wand2 size={12} /> {item.improved_prompt}
+            </p>
+          )}
+        </div>
+        <button
+          onClick={() => onDelete(item.id)}
+          style={{
+            background: 'none', border: 'none', color: '#4b5563', cursor: 'pointer',
+            padding: '4px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            transition: 'color 0.2s, background 0.2s', marginLeft: '12px'
+          }}
+          onMouseEnter={e => { e.currentTarget.style.color = '#ef4444'; e.currentTarget.style.background = 'rgba(239,68,68,0.1)'; }}
+          onMouseLeave={e => { e.currentTarget.style.color = '#4b5563'; e.currentTarget.style.background = 'transparent'; }}
+          title="Delete message"
+        >
+          <Trash2 size={18} />
+        </button>
+      </div>
+
+      <div style={{
+        marginTop: '8px', borderRadius: '12px', overflow: 'hidden',
+        background: 'rgba(0,0,0,0.2)', minHeight: '200px', display: 'flex',
+        alignItems: 'center', justifyContent: 'center', width: '100%'
+      }}>
+        {isError ? (
+          <p style={{ color: '#ef4444', fontSize: '0.9rem' }}>Generation failed</p>
+        ) : actualUrl ? (
+          item.media_type === 'video' ? (
+            <video src={actualUrl} autoPlay loop muted playsInline style={{ width: '100%', display: 'block' }} />
+          ) : (
+            <img src={actualUrl} alt={item.original_prompt} style={{ width: '100%', display: 'block' }} />
+          )
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', alignItems: 'center', color: '#a78bfa' }}>
+            <Loader2 size={24} className="animate-spin" />
+            <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>Generating {item.media_type}...</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default function ChatInterface() {
+  const [history, setHistory] = useState<GraphicsItem[]>([]);
+  const [input, setInput] = useState('');
+  const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEnhancing, setIsEnhancing] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  const loadHistory = async () => {
+    try {
+      const items = await graphicsGenerationApi.getHistory();
+      setHistory(items.reverse()); // oldest first for chat flow
+    } catch (err) {
+      console.error('Failed to load history', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const scrollToBottom = () => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [history]);
+
+  const handleEnhance = async () => {
+    if (!input.trim()) return;
+    setIsEnhancing(true);
+    try {
+      const res = await graphicsGenerationApi.enhancePrompt(input);
+      setInput(res.improved_prompt);
+    } catch (err) {
+      console.error(err);
+      alert('Failed to enhance prompt.');
+    } finally {
+      setIsEnhancing(false);
+    }
+  };
+
+  const handleSend = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!input.trim()) return;
+
+    const originalInput = input;
+    setInput('');
+    
+    // Add optimistic placeholder
+    const optimisticItem: GraphicsItem = {
+      id: Date.now(),
+      created_at: new Date().toISOString(),
+      original_prompt: originalInput,
+      improved_prompt: originalInput,
+      media_type: mediaType,
+      media_url: '', // pending
+    };
+    setHistory(prev => [...prev, optimisticItem]);
+
+    try {
+      const newItem = await graphicsGenerationApi.generateMedia(originalInput, originalInput, mediaType);
+      setHistory(prev => prev.map(item => item.id === optimisticItem.id ? newItem : item));
+    } catch (err) {
+      console.error('Failed to generate media', err);
+      // Remove optimistic item on failure
+      setHistory(prev => prev.filter(item => item.id !== optimisticItem.id));
+      setInput(originalInput);
+      alert('Generation request failed.');
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      await graphicsGenerationApi.deleteItem(id);
+      setHistory(prev => prev.filter(i => i.id !== id));
+    } catch (err) {
+      console.error('Failed to delete', err);
+    }
+  };
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Scrollable Feed */}
+      <div 
+        ref={scrollRef}
+        style={{ 
+          flex: 1, overflowY: 'auto', padding: '24px', 
+          display: 'flex', flexDirection: 'column', gap: '24px' 
+        }}
+      >
+        {isLoading ? (
+          <div style={{ margin: 'auto', color: 'var(--text-muted)' }}><Loader2 className="animate-spin" /></div>
+        ) : history.length === 0 ? (
+          <div style={{ margin: 'auto', color: 'var(--text-muted)', textAlign: 'center' }}>
+            <Wand2 size={48} style={{ opacity: 0.2, margin: '0 auto 16px block' }} />
+            <p>No generations yet.<br/>Type a description below to get started!</p>
+          </div>
+        ) : (
+          history.map(item => (
+            <MediaDisplay key={item.id} item={item} onDelete={handleDelete} />
+          ))
+        )}
+      </div>
+
+      {/* Input Area */}
+      <div style={{ background: 'rgba(1,22,39,0.5)', borderTop: '1px solid var(--glass-border)', padding: '16px 24px' }}>
+        <form 
+          onSubmit={handleSend}
+          style={{ 
+            display: 'flex', gap: '12px', alignItems: 'flex-end', 
+            maxWidth: '800px', margin: '0 auto' 
+          }}
+        >
+          {/* Enhance Button */}
+          <button
+            type="button"
+            onClick={handleEnhance}
+            disabled={isEnhancing || !input.trim()}
+            style={{
+              background: 'linear-gradient(135deg, #818cf8, #c084fc)',
+              border: 'none', borderRadius: '12px', width: '44px', height: '44px',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'white', cursor: (isEnhancing || !input.trim()) ? 'not-allowed' : 'pointer',
+              opacity: (isEnhancing || !input.trim()) ? 0.6 : 1, transition: 'transform 0.2s', flexShrink: 0
+            }}
+            title="Enhance prompt with AI"
+            onMouseEnter={e => { if(!e.currentTarget.disabled) e.currentTarget.style.transform = 'scale(1.05)'; }}
+            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+          >
+            {isEnhancing ? <Loader2 size={20} className="animate-spin" /> : <Plus size={22} />}
+          </button>
+
+          {/* Text Input */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <textarea
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder="Describe what you want to generate in 1-3 sentences..."
+              rows={2}
+              style={{
+                width: '100%', padding: '12px 16px', borderRadius: '14px',
+                background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)',
+                color: 'var(--text-light)', fontSize: '0.95rem', fontFamily: 'inherit',
+                outline: 'none', resize: 'none', lineHeight: '1.4'
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  handleSend();
+                }
+              }}
+            />
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
+            {/* Media Type Slider/Toggle */}
+            <div style={{ 
+              display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', 
+              padding: '4px', border: '1px solid var(--glass-border)' 
+            }}>
+              <button
+                type="button"
+                onClick={() => setMediaType('image')}
+                style={{
+                  flex: 1, padding: '6px 12px', border: 'none', borderRadius: '6px',
+                  background: mediaType === 'image' ? '#a78bfa' : 'transparent',
+                  color: mediaType === 'image' ? '#fff' : 'var(--text-muted)',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                  fontSize: '0.8rem', fontWeight: 600, transition: 'all 0.2s'
+                }}
+              >
+                <ImageIcon size={14} /> Image
+              </button>
+              <button
+                type="button"
+                onClick={() => setMediaType('video')}
+                style={{
+                  flex: 1, padding: '6px 12px', border: 'none', borderRadius: '6px',
+                  background: mediaType === 'video' ? '#a78bfa' : 'transparent',
+                  color: mediaType === 'video' ? '#fff' : 'var(--text-muted)',
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                  fontSize: '0.8rem', fontWeight: 600, transition: 'all 0.2s'
+                }}
+              >
+                <Video size={14} /> Video
+              </button>
+            </div>
+
+            {/* Send Button */}
+            <button
+              type="submit"
+              disabled={!input.trim()}
+              style={{
+                background: 'var(--primary)', color: '#fff', border: 'none',
+                borderRadius: '10px', padding: '10px 16px', fontWeight: 600,
+                cursor: !input.trim() ? 'not-allowed' : 'pointer', fontSize: '0.9rem',
+                opacity: !input.trim() ? 0.6 : 1, display: 'flex', alignItems: 'center',
+                justifyContent: 'center', gap: '6px', transition: 'background 0.2s'
+              }}
+            >
+              <Send size={16} /> Send
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

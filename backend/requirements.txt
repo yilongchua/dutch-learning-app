@@ -1,0 +1,17 @@
+fastapi
+uvicorn
+sqlmodel
+pydantic-settings
+openai
+jinja2
+httpx
+language-tool-python
+spacy
+mlx-whisper
+coqui-tts
+python-multipart
+sqlalchemy
+pydantic-extra-types
+torchaudio
+torch
+numpy

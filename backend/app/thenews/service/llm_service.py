@@ -1,0 +1,44 @@
+import uuid
+from backend.base.llm_base import LLMBase
+from typing import Optional, List, Dict
+from backend.app.thenews.schema.response_format import QuestionsExtracted, ArticleExtracted, ImagePromptsExtracted
+from backend.app.thenews.schema.news_item import NewsItemBase, NewsItem, ImageInfo
+from datetime import datetime
+class LocalLLMService(LLMBase):
+    def __init__(self):
+        import os
+        prompt_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "prompts")
+        super().__init__(model="openai/gpt-oss-120b", template_dir=prompt_dir)
+    async def generate_questions(self, theme:str, **kwargs) -> QuestionsExtracted:
+        """Generates unique sub-questions based on a theme and avoiding historical question."""
+        result = QuestionsExtracted()
+        system_prompt = f"You are curious young asian female mid 30s interested in {theme}, asking questions about the latest news"
+        user_prompt = self.render_prompt("generate_questions", year = datetime.year, **kwargs)    
+        result = await self.generate_output(system_prompt=system_prompt, user_prompt=user_prompt, response_model=QuestionsExtracted)
+        return result
+    
+    async def generate_article(self, news_item: NewsItem) -> NewsItem:
+        """Generates a structured article dict based on search context."""
+        result = ArticleExtracted()
+        system_prompt = "You are a helpful news assistant. Write objective news articles based on the given sources. Output strictly structured text matching the template."
+        user_prompt = self.render_prompt("generate_article", news_item=news_item)
+        result = await self.generate_output(system_prompt, user_prompt, response_model=ArticleExtracted)
+        news_item.article = result.article
+        return news_item
+    
+    async def translate_dutch_b1(self, news_item: NewsItem) -> NewsItem:
+        """Translates a single text block to Dutch B1."""
+        system_prompt = "You are a professional Dutch translator (CEFR B1). Preparing Specific Content for CVanT B1 Learner translation, Output the information in specific format"
+        user_prompt = self.render_prompt("translate_b1", news_item=news_item)
+        result = await self.generate_output(system_prompt, user_prompt, response_model=None)
+        news_item.output_captions = result
+        return news_item
+
+    async def generate_image_prompts(self, news_item:NewsItem) -> NewsItem:
+        """Generates image prompts."""
+        system_prompt = "You are a visual narrative designer. Create a chronological series of image prompts that illustrate the key events/details/situations"
+        user_prompt = self.render_prompt("generate_image_prompts", news_item=news_item)
+        result = await self.generate_output(system_prompt, user_prompt, response_model=ImagePromptsExtracted)
+        news_item.images_info = [ImageInfo(image_id=f"thenews/{news_item.theme}_{str(uuid.uuid4())}", 
+                                           image_prompt=info) for info in result.image_prompts]
+        return news_item

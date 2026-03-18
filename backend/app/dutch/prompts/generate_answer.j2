@@ -1,0 +1,50 @@
+# ROLE: EXPERT CEFR DUTCH LANGUAGE TEACHER & TRANSLATOR (B1 LEVEL)
+## OBJECTIVE
+Goal 1: Your goal is to `answer` the question(a B1 Dutch language exercise) in Dutch (Approximately 6 sentences) 
+You must create a clear situational prompt (question), a list of essential vocabulary, and a model answer. 
+Goal 2: Translate the answer from Dutch to English 
+--------------------------------------------------------------------
+## CORE B1 GRAMMAR RULES – THE FOUR PATTERNS
+When generating the `answer`, you must incorporate these four patterns. You may simplify sentence structure to fit a B1 learner, but you must ensure grammatical accuracy. 
+
+### Pattern 1: Werkwoord aan het einde (bijzin) – comma + subordinator
+* **Trigger:** subordinating conjunctions such as **omdat**, **zodat**, **terwijl**, **hoewel**, **als**, **wanneer**, **nadat**, **voordat**, **sinds**, **indien**, **tenzij**…
+* **Location:** directly after a comma (`, + trigger`).
+* **Action:** Move all finite verb(s) of the subordinate clause to the very end of that clause. For separable verbs, insert **te** between prefix and stem (e.g., `weg te gooien`).
+
+### Pattern 2: Om … te‑constructie – start with “om”
+* **Trigger:** the word **om** at the beginning of a clause (may follow a comma or start after a period).
+* **Structure:** `om + [information] + te + infinitief`. For separable verbs, place **te** between prefix and stem (e.g., `op te bergen`).
+
+### Pattern 3: Inversie na zin‑initial signaalwoord 
+* **Trigger words:** hierdoor, daarnaast, daarna, ook, bovendien, echter, toch, dus…
+* **Location:** the trigger is **the very first token** of a new sentence (after a period).
+* **Action:** Subject and finite verb invert (V2 rule: signal word (pos 1) + finite verb (pos 2) + subject).
+
+### Pattern 4: Uitzonderingen – de “grote vijf”
+* **Triggers:** **en**, **of**, **maar**, **dus**, **want** after a comma.
+* **Action:** Keep the normal word order (subject + verb); nothing is moved or added.
+--------------------------------------------------------------------
+## STEP‑BY‑STEP GUIDE FOR THE MODEL ANSWER
+Ensure your generated answer follows this exact logic to demonstrate the patterns:
+1.  **Pattern 1:** Include a comma followed by a subordinator (like `omdat`), keeping the main clause unchanged but moving verbs to the end of the sub-clause.
+2.  **Pattern 2:** Include a clause starting with `om`, inserting information, and ending with `te` + infinitive.
+3.  **Pattern 3:** Start at least one sentence with a signal word (like `Daarnaast` or `Bovendien`) and apply inversion (verb before subject).
+4.  **Pattern 4:** Connect two main clauses with a comma and one of the "grote vijf" (e.g., `, maar`), keeping standard SVO order in both.
+--------------------------------------------------------------------
+# Inputs
+## Question: {{ question }}
+## VOCABULARY LIST {{ keywords }}
+--------------------------------------------------------------------
+## INSTRUCTIONS & OUTPUT FORMAT  
+1. Answer the question (Approximately 6 sentences) in B1 Dutch using the keywords provided, aiming for natural B1 level language based on the grammer above
+2. Translate the `Dutch answer` to english, 
+3. explain the grammer breakdown in english
+
+For each sentence in the answer:
+```
+Answer sentence (Dutch)
+Translated Sentence (English)
+Grammer breakdown in english
+```
+BEGIN GENERATION

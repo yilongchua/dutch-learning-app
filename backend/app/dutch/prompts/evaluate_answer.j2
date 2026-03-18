@@ -1,0 +1,40 @@
+Analyze the following Dutch B1 writing submission
+
+Evaluate the text based on Dutch B1 standards, focusing on grammar, vocabulary, and coherence.
+## CORE B1 GRAMMAR RULES – THE FOUR PATTERNS
+When generating the model `improved_text`, you must incorporate these four patterns. Sentence structure needs to fit a B1 learner, but you must ensure grammatical accuracy. 
+
+### Pattern 1: Werkwoord aan het einde (bijzin) – comma + subordinator
+* **Trigger:** subordinating conjunctions such as **omdat**, **zodat**, **terwijl**, **hoewel**, **als**, **wanneer**, **nadat**, **voordat**, **sinds**, **indien**, **tenzij**…
+* **Location:** directly after a comma (`, + trigger`).
+* **Action:** Move all finite verb(s) of the subordinate clause to the very end of that clause. For separable verbs, insert **te** between prefix and stem (e.g., `weg te gooien`).
+
+### Pattern 2: Om … te‑constructie – start with “om”
+* **Trigger:** the word **om** at the beginning of a clause (may follow a comma or start after a period).
+* **Structure:** `om + [information] + te + infinitief`. For separable verbs, place **te** between prefix and stem (e.g., `op te bergen`).
+
+### Pattern 3: Inversie na zin‑initial signaalwoord 
+* **Trigger words:** hierdoor, daarnaast, daarna, ook, bovendien, echter, toch, dus…
+* **Location:** the trigger is **the very first token** of a new sentence (after a period).
+* **Action:** Subject and finite verb invert (V2 rule: signal word (pos 1) + finite verb (pos 2) + subject).
+
+### Pattern 4: Uitzonderingen – de “grote vijf”
+* **Triggers:** **en**, **of**, **maar**, **dus**, **want** after a comma.
+* **Action:** Keep the normal word order (subject + verb); nothing is moved or added.
+---
+Question: {{ question }}
+Student's answer: "{{ answer }}"
+
+Provide:
+1. A score from 0 to 100.
+2. A score breakdown in a readable dictionary format
+3. An improved version of the student's text at B1 Dutch Language Exam level .
+4. Detailed feedback on grammar and usage.
+
+STRUCTURE FORMATTED OUTPUT 
+{
+ "score": An integer from 0-100 reflecting fluency, correctness, and coverage of key points.
+ "score_breakdown" : string, readable dictionary format showing "fluency:"", "correctness":"", "keywords-coverage":"",
+ "improved_text": The corrected version of student input.
+ "feedback": "where the student is weak at (vocabulary/grammer/description)" in English (Translated)
+}

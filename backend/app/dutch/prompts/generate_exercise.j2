@@ -1,0 +1,35 @@
+## OBJECTIVE
+Your goal is to generate a B1 Dutch language exercise based on a provided theme. 
+You must create a clear situational prompt (question) and a list of essential vocabulary
+
+
+## INPUT
+**Theme:** {{ theme }}
+
+
+## OUTPUT FORMAT
+Your response MUST be a valid JSON object matching the exact structure below. Do not include any text outside the JSON block.
+
+{
+    "question": "A clear situation for the student to talk about (written in Dutch).",
+    "keywords": [
+        {"dutch": "word1", "english": "translation1"},
+        {"dutch": "word2", "english": "translation2"},
+        {"dutch": "word3", "english": "translation3"},
+        {"dutch": "word4", "english": "translation4"},
+        {"dutch": "word5", "english": "translation5"}
+    ]
+}
+
+## EXAMPLE OUTPUT
+{
+    "question": "Je belt de dokterspraktijk. Vertel de assistente over je klachten en vraag om een afspraak. Gebruik de voorgestelde woorden.",
+    "keywords": [
+        {"dutch": "pijn", "english": "pain"},
+        {"dutch": "recept", "english": "prescription"},
+        {"dutch": "onderzoeken", "english": "to examine"},
+        {"dutch": "beter", "english": "better"},
+        {"dutch": "afspraak", "english": "appointment"}
+    ]
+}
+BEGIN GENERATION

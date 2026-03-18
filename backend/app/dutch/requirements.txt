@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+pyttsx3
+mlx-whisper
+huggingface_hub
+language_tool_python
+spacy
+openai
+TTS
