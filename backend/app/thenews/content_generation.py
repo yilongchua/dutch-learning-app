@@ -1,6 +1,7 @@
 import asyncio, os, sys, json
 from sqlmodel import Session, select, distinct
 # Add project root to sys.path
+from pathlib import Path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../../..")))
 from backend.app.thenews.core.database import engine, init_db
 from backend.app.thenews.schema.news_item import NewsItem
@@ -10,15 +11,16 @@ from backend.app.thenews.service.llm_service import LocalLLMService
 from backend.base.websearch_service  import WebSearchService
 from backend.base.comfy_base  import ComfyUIService
 from backend.schema.search import SearchResult
-
+from backend.config.config import DATA_DIR
 
 class ContentGenerator:
     """
     Complete Content Generation Pipeline Orchestrator.
     Handles: Question Gen -> News Gen (Per Question) -> Image Gen -> Translation/Restructure -> Unified NewsItem.
     """
-    def __init__(self, theme_file: str = "../../data/theme.json"):
+    def __init__(self, theme_file: str = Path(DATA_DIR) / "app"/ "thenews" /"theme.json"):
         self.theme_file = theme_file
+        print(self.theme_file)
         init_db()
         self.web_search = WebSearchService()
         self.llm = LocalLLMService()
@@ -28,6 +30,7 @@ class ContentGenerator:
     def _load_themes(self):
         with Session(engine) as session:
             theme = session.exec(select(distinct(Theme.name))).all()
+            print(f'{theme=}')
         if theme:
             return theme
         else:
@@ -50,7 +53,7 @@ class ContentGenerator:
         with Session(engine) as session:
             # Find past questions from Unified NewsItem table
             past_questions = session.exec(select(NewsItem.question).where(NewsItem.theme == theme_name)).all()
-            latest_news = await self.web_search.search_updates(theme=theme_name)
+            latest_news = await self.web_search.search_updates(input_text=theme_name)
             print(f"    [*] Generating questions (Local LLM)...")
             new_questions: QuestionsExtracted = await self.llm.generate_questions(theme_name, past_questions=past_questions, news=latest_news)
             processed_count = 0
@@ -73,8 +76,8 @@ class ContentGenerator:
                     news_item = await self.llm.generate_image_prompts(news_item)
                     # Image Generation (ComfyUI)
                     print(f"        [*] Submitting image prompts to ComfyUI...")
-                    news_item = await self.image_gen.generate_image(news_item)
-                    
+                    for image in news_item.images_info:
+                        news_item = await self.image_gen.generate_image(image_prompt=image.image_prompt, file_prefix=image.image_id)
                     print(f"        [*] Prepare model for DB...")
                     session.add(news_item)
                     session.commit()

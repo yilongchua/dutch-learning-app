@@ -2,6 +2,7 @@ import asyncio
 import os
 import sys
 from pathlib import Path
+import httpx
 
 # Add project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -16,6 +17,16 @@ async def test_llm():
     print(f"URL: {settings.LOCAL_LLM_URL}")
     print(f"Model: {settings.MODEL}")
     try:
+        # Ping LLM endpoint
+        print(f"Pinging LLM endpoint: {settings.LOCAL_LLM_URL.rstrip('/')}/models")
+        resp = httpx.get(f"{settings.LOCAL_LLM_URL.rstrip('/')}/models", timeout=5.0)
+        if resp.status_code == 200:
+            print("✅ LLM endpoint is reachable.")
+        else:
+            print(f"❌ LLM endpoint returned status {resp.status_code}")
+            print(f"Response: {resp.text}")
+            return # Exit if ping fails
+
         llm = LLMBase()
         # Test a simple generation
         response = await llm.generate_output("You are a helpful assistant.", "Say 'Hello, I am working!'")

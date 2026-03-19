@@ -4,6 +4,7 @@ from typing import Optional, List, Dict
 from backend.app.thenews.schema.response_format import QuestionsExtracted, ArticleExtracted, ImagePromptsExtracted
 from backend.app.thenews.schema.news_item import NewsItemBase, NewsItem, ImageInfo
 from datetime import datetime
+from backend.config.config import settings
 class LocalLLMService(LLMBase):
     def __init__(self):
         import os
@@ -39,6 +40,7 @@ class LocalLLMService(LLMBase):
         system_prompt = "You are a visual narrative designer. Create a chronological series of image prompts that illustrate the key events/details/situations"
         user_prompt = self.render_prompt("generate_image_prompts", news_item=news_item)
         result = await self.generate_output(system_prompt, user_prompt, response_model=ImagePromptsExtracted)
-        news_item.images_info = [ImageInfo(image_id=f"thenews/{news_item.theme}_{str(uuid.uuid4())}", 
-                                           image_prompt=info) for info in result.image_prompts]
+        for info in result.image_prompts:
+            id_name = f"thenews/{news_item.theme}_{str(uuid.uuid4())}"
+            news_item.images_info.append(ImageInfo(image_id=id_name, img_path=str(settings.COMFYUI_DIR)+f"/{id_name}.jpg", image_prompt=info ))
         return news_item

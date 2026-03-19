@@ -39,7 +39,7 @@ class Settings(BaseSettings):
 
     # API Keys / External Services
     COMFYUI_API_URL: str = Field(
-        default="http://192.168.1.21:8188",
+        default="http://localhost:8188",
         env="COMFYUI_API_URL"
     )
     SEARXNG_URL: str = Field(
@@ -53,7 +53,7 @@ class Settings(BaseSettings):
     
     # LLM Settings
     LOCAL_LLM_URL: str = Field(
-        default="http://192.168.1.21:1234/v1",
+        default="http://localhost:1234/v1",
         env="LOCAL_LLM_URL"
     )
     MODEL: str = Field(
@@ -77,7 +77,7 @@ class Settings(BaseSettings):
 
     # Load from the project root .env
     model_config = SettingsConfigDict(
-        env_file=BASE_DIR.parent / ".env", 
+        env_file=str(BASE_DIR.parent / ".env"), 
         env_file_encoding="utf-8", 
         extra="ignore"
     )

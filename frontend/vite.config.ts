@@ -8,6 +8,7 @@ export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '../', ''); 
 
   return {
+    envDir: '../', 
     plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
     resolve: {
       dedupe: ['react', 'react-dom', 'react-router'],

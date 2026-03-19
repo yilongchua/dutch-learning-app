@@ -47,8 +47,13 @@ class NewsItemBase(SQLModel):
 class NewsItem(NewsItemBase, table=True):
     """Unified single-table model for all news content and generation metadata."""
     id: Optional[int] = Field(default=None, primary_key=True)
-    created_at: datetime = Field(default_factory=datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column_kwargs={"onupdate": lambda: datetime.now(timezone.utc)}
+    )
+
+
 
 class NewsItemCreate(NewsItemBase):
     pass

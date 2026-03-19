@@ -36,7 +36,7 @@ class SearxngService:
             print(f"[SearxngService] Exception: {e}")
         return search_result
 
-    async def search(self, query: str, payload:dict ,num_results: int = 5) -> SearchResult:
+    async def search(self, query: str ,num_results: int = 5) -> SearchResult:
         """
         Searches SearXNG and returns a list of dictionaries with title, body, sources.
         """

@@ -26,19 +26,24 @@ class LLMBase:
         self.max_retries: int = 3
 
     @staticmethod
-    def _pick_first_responsive(urls:list[str]) -> str:
+    def _pick_first_responsive(urls: list[str]) -> str:
+        """Pick the first responsive LLM URL. Skips ping if only one URL exists."""
+        if len(urls) == 1:
+            return urls[0]
+
         for url in urls:
             try:
-                # Import here to avoid circular imports / keep it local
                 import httpx
-                # HEAD might not be supported by all LLM servers, use GET or just try-catch the connection
-                httpx.get(url, timeout=1.0)
+                # Use a valid OpenAI-compatible endpoint to check status
+                test_url = f"{url.rstrip('/')}/models"
+                httpx.get(test_url, timeout=2.0)
                 return url
             except Exception as e:
                 print(f"Warning: URL {url} did not respond: {e}")
                 continue
+        
         print("Warning: None of the configured LLM URLs responded. Using the first one as default.")
-        return urls[0] # Return the first one instead of crashing
+        return urls[0]
     def render_prompt(self, template_name: str, **kwargs) -> str:
         """Render Jinja prompt."""
         template = self.env.get_template(f"{template_name}.j2")
