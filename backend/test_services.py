@@ -43,7 +43,7 @@ async def test_searxng():
     print(f"URL: {settings.SEARXNG_URL}")
     try:
         service = SearxngService()
-        result = await service.search("Python news", payload={}, num_results=1)
+        result = await service.search("Python news", num_results=1)
         print(f"Found {len(result.search_items)} results.")
         if result.search_items:
             print(f"First result: {result.search_items[0].title}")

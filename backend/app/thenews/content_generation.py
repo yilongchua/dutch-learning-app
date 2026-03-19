@@ -42,7 +42,7 @@ class ContentGenerator:
     async def run_pipeline(self):
         themes = self._load_themes()
         print(f"[*] Loaded {len(themes)} themes for end-to-end testing.")
-        for idx, theme_name in enumerate(themes):
+        for idx, theme_name in enumerate(themes[:1]):
             print(f"\n[!] Theme: {theme_name} ({idx+1}/{len(themes)})")
             success = await self.run_process(theme_name)
             if not success:
@@ -57,7 +57,7 @@ class ContentGenerator:
             print(f"    [*] Generating questions (Local LLM)...")
             new_questions: QuestionsExtracted = await self.llm.generate_questions(theme_name, past_questions=past_questions, news=latest_news)
             processed_count = 0
-            for q_idx, question in enumerate(new_questions.questions): 
+            for q_idx, question in enumerate(new_questions.questions[:1]): 
                 news_item = NewsItem(theme=theme_name, question=question)
                 print(f"\n    [>] Question {q_idx+1}/{len(new_questions.questions)}: {question}")                
                 try:
@@ -77,14 +77,15 @@ class ContentGenerator:
                     # Image Generation (ComfyUI)
                     print(f"        [*] Submitting image prompts to ComfyUI...")
                     for image in news_item.images_info:
-                        news_item = await self.image_gen.generate_image(image_prompt=image.image_prompt, file_prefix=image.image_id)
+                        image.prompt_id = await self.image_gen.generate_image(image_prompt=image.image_prompt, file_prefix=image.image_id)
+                        image.status = "processing"
                     print(f"        [*] Prepare model for DB...")
                     session.add(news_item)
                     session.commit()
                     processed_count += 1
-
                 except Exception as e:
                     print(f"        [!] Error processing question: {e}")
+                    session.rollback()
 
             print(f"\n[+] Successfully completed session for theme: {theme_name}")
             return processed_count > 0

@@ -17,15 +17,19 @@ class ExerciseGenerator:
         self.current_theme = ""
         
     def _load_themes(self) -> list[str]:
-        with Session(engine) as session:
-            themes = session.exec(select(distinct(Theme.name))).all()
-        return themes if themes else []
+        theme_path = os.path.join(os.path.dirname(__file__), "../../../data/app/dutch/theme.json")
+        try:
+            with open(theme_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get('theme', [])
+        except Exception as e:
+            print(f"[!] Error loading themes from {theme_path}: {e}")
+            return ["Dagelijkse routine"]
 
     def _add_theme(self, theme_name):
-        with Session(engine) as session:
-            session.add(Theme(name=theme_name))
-            session.commit()
-            return True
+        # Database theme addition is now manual via theme.json
+        pass
+
     def _add_exercise(self, exercise:ExerciseContent):
         with Session(engine) as session:
             session.add(exercise)
@@ -33,15 +37,9 @@ class ExerciseGenerator:
             return True
     
     async def set_theme(self) -> str:
-        if random.random() > 0.8:    
-            new_theme = await self.llm.get_new_theme(self._load_themes())
-            self._add_theme(new_theme)
-            return new_theme
         themes = self._load_themes()
         if not themes:
-             new_theme = await self.llm.get_new_theme([])
-             self._add_theme(new_theme)
-             return new_theme
+             return "Dagelijkse routine"
         return random.choice(themes)
     
     async def new_exercise(self, exercise_type: str = 'writing') -> ExerciseContent:

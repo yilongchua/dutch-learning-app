@@ -33,8 +33,7 @@ export const evaluateSpeaking = (formData: FormData) =>
     headers: { 'Content-Type': 'multipart/form-data' },
   });
 
-export const getDashboardData = (userId: string) =>
-  api.get(`/dashboard/${userId}`);
+
 
 export const generateTheme = (currentTheme: string) =>
   api.get('/generate-theme', { params: { current_theme: currentTheme } });

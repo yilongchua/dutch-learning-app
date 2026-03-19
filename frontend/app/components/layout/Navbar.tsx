@@ -2,7 +2,6 @@ import { NavLink, useLocation } from 'react-router';
 import {
   GraduationCap,
   Newspaper,
-  LayoutDashboard,
   PenTool,
   Mic,
   Headphones,
@@ -35,7 +34,6 @@ const sections: NavSection[] = [
     color: 'var(--primary)',
     accent: 'rgba(255,159,28,0.15)',
     items: [
-      { title: 'Dashboard', path: '/dutch', icon: <LayoutDashboard size={15} /> },
       { title: 'Writing', path: '/dutch/writing', icon: <PenTool size={15} /> },
       { title: 'Speaking', path: '/dutch/speaking', icon: <Mic size={15} /> },
       { title: 'Listening', path: '/dutch/listening', icon: <Headphones size={15} /> },
@@ -159,22 +157,28 @@ export default function Navbar() {
                 <div
                   style={{
                     position: 'absolute',
-                    top: 'calc(100% + 8px)',
+                    top: '100%',
                     left: '50%',
                     transform: 'translateX(-50%)',
-                    background: 'rgba(1,22,39,0.95)',
-                    backdropFilter: 'blur(20px)',
-                    border: '1px solid var(--glass-border)',
-                    borderRadius: '14px',
-                    padding: '8px',
-                    minWidth: '160px',
-                    boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    gap: '4px',
-                    animation: 'fadeIn 0.15s ease',
+                    paddingTop: '8px',
+                    zIndex: 1000,
                   }}
                 >
+                  <div
+                    style={{
+                      background: 'rgba(1,22,39,0.95)',
+                      backdropFilter: 'blur(20px)',
+                      border: '1px solid var(--glass-border)',
+                      borderRadius: '14px',
+                      padding: '8px',
+                      minWidth: '160px',
+                      boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      animation: 'fadeIn 0.15s ease',
+                    }}
+                  >
                   {section.items.map((item) => (
                     <NavLink
                       key={item.path}
@@ -198,6 +202,7 @@ export default function Navbar() {
                       {item.title}
                     </NavLink>
                   ))}
+                  </div>
                 </div>
               )}
             </div>

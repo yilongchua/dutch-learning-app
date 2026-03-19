@@ -32,13 +32,22 @@ async def dutch_root():
 async def health_check():
     return {"status": "healthy", "app": "dutch"}
 
+import json
+import random
+
 @router.get("/generate-theme")
-async def generate_theme(session: Session = Depends(get_session)):
-    # Get existing themes from DB to avoid duplicates
-    stmt = select(ExerciseContent.theme).distinct()
-    existing_themes = session.exec(stmt).all()
-    theme = await llm_service.get_new_theme(existing_themes)
-    return {"theme": theme}
+async def generate_theme():
+    theme_path = os.path.join(os.path.dirname(__file__), "../../../data/app/dutch/theme.json")
+    try:
+        with open(theme_path, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            themes = data.get('theme', [])
+            if themes:
+                return {"theme": random.choice(themes)}
+    except Exception as e:
+        print(f"[!] Error loading themes in router: {e}")
+    
+    return {"theme": "Dagelijkse routine"}
 
 @router.get("/exercise/{category}")
 async def get_exercise(category: str, theme: str = "Dagelijkse routine"):
@@ -129,22 +138,6 @@ async def evaluate_speaking(
         "improved_text": result.improved_text,
         "score_breakdown": result.score_breakdown,
         "exercise_id": result.id
-    }
-
-@router.get("/dashboard/{user_id}")
-@router.get("/dashboard")
-async def get_dashboard(user_id: Optional[str] = None, session: Session = Depends(get_session)):
-    stmt = select(ExerciseContent).where(ExerciseContent.status == "completed").order_by(ExerciseContent.updated_at.desc()).limit(30)
-    history = session.exec(stmt).all()
-    
-    # Calculate streak (distinct dates)
-    stmt_streak = select(func.count(func.distinct(ExerciseContent.date_completed))).where(ExerciseContent.status == "completed")
-    streak = session.exec(stmt_streak).one()
-    
-    return {
-        "history": history,
-        "streak": streak,
-        "level": "B1"
     }
 
 @router.get("/tts")

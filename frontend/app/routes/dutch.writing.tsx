@@ -133,7 +133,6 @@ export default function WritingPage() {
       <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h1>Writing Practice</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: '4px' }}>Theme: <strong style={{ color: 'var(--primary)' }}>{exercise.theme}</strong></p>
         </div>
         <button className="btn btn-secondary" onClick={() => fetchNewExercise(true)} disabled={loading}>
           <RefreshCcw size={16} /> New Exercise

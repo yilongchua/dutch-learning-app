@@ -119,7 +119,6 @@ export default function SpeakingPage() {
       <header style={{ marginBottom: '32px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1>Speaking Practice</h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: '4px' }}>Theme: <strong style={{ color: 'var(--secondary)' }}>{exercise.theme}</strong></p>
         </div>
         <button className="btn btn-secondary" onClick={() => fetchNewExercise(true)} disabled={loading}>
           <RefreshCcw size={16} /> New Exercise

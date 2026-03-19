@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Plus, Image as ImageIcon, Video, Trash2, Loader2, Wand2 } from 'lucide-react';
-import { graphicsGenerationApi, GraphicsItem, COMFY_URL } from '~/services/graphicsGenerationApi';
+import { graphicsGenerationApi, type GraphicsItem, COMFY_URL } from '~/services/graphicsGenerationApi';
 
 function MediaDisplay({ item, onDelete }: { item: GraphicsItem, onDelete: (id: number) => void }) {
   const [actualUrl, setActualUrl] = useState<string | null>(null);
@@ -106,7 +106,8 @@ export default function ChatInterface() {
   const [input, setInput] = useState('');
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [isLoading, setIsLoading] = useState(true);
-  const [isEnhancing, setIsEnhancing] = useState(false);
+  const [isEnhanceEnabled, setIsEnhanceEnabled] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -134,27 +135,14 @@ export default function ChatInterface() {
     scrollToBottom();
   }, [history]);
 
-  const handleEnhance = async () => {
-    if (!input.trim()) return;
-    setIsEnhancing(true);
-    try {
-      const res = await graphicsGenerationApi.enhancePrompt(input);
-      setInput(res.improved_prompt);
-    } catch (err) {
-      console.error(err);
-      alert('Failed to enhance prompt.');
-    } finally {
-      setIsEnhancing(false);
-    }
-  };
-
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || isGenerating) return;
 
     const originalInput = input;
     setInput('');
-    
+    setIsGenerating(true);
+
     // Add optimistic placeholder
     const optimisticItem: GraphicsItem = {
       id: Date.now(),
@@ -167,7 +155,19 @@ export default function ChatInterface() {
     setHistory(prev => [...prev, optimisticItem]);
 
     try {
-      const newItem = await graphicsGenerationApi.generateMedia(originalInput, originalInput, mediaType);
+      let finalPromptToUse = originalInput;
+      
+      if (isEnhanceEnabled) {
+        try {
+          const res = await graphicsGenerationApi.enhancePrompt(originalInput);
+          finalPromptToUse = res.improved_prompt;
+        } catch (enhanceErr) {
+          console.error("Enhancement failed, using original prompt", enhanceErr);
+          // Fallback to original prompt if enhancement fails
+        }
+      }
+
+      const newItem = await graphicsGenerationApi.generateMedia(originalInput, finalPromptToUse, mediaType);
       setHistory(prev => prev.map(item => item.id === optimisticItem.id ? newItem : item));
     } catch (err) {
       console.error('Failed to generate media', err);
@@ -175,6 +175,8 @@ export default function ChatInterface() {
       setHistory(prev => prev.filter(item => item.id !== optimisticItem.id));
       setInput(originalInput);
       alert('Generation request failed.');
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -223,20 +225,21 @@ export default function ChatInterface() {
           {/* Enhance Button */}
           <button
             type="button"
-            onClick={handleEnhance}
-            disabled={isEnhancing || !input.trim()}
+            onClick={() => setIsEnhanceEnabled(prev => !prev)}
             style={{
-              background: 'linear-gradient(135deg, #818cf8, #c084fc)',
-              border: 'none', borderRadius: '12px', width: '44px', height: '44px',
+              background: isEnhanceEnabled ? 'linear-gradient(135deg, #818cf8, #c084fc)' : 'rgba(0,0,0,0.3)',
+              border: isEnhanceEnabled ? '2px solid #a78bfa' : '2px solid transparent',
+              borderRadius: '50%', width: '44px', height: '44px',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'white', cursor: (isEnhancing || !input.trim()) ? 'not-allowed' : 'pointer',
-              opacity: (isEnhancing || !input.trim()) ? 0.6 : 1, transition: 'transform 0.2s', flexShrink: 0
+              color: isEnhanceEnabled ? 'white' : 'var(--text-muted)',
+              cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0,
+              boxShadow: isEnhanceEnabled ? '0 0 15px rgba(167, 139, 250, 0.5)' : 'none'
             }}
-            title="Enhance prompt with AI"
-            onMouseEnter={e => { if(!e.currentTarget.disabled) e.currentTarget.style.transform = 'scale(1.05)'; }}
+            title={isEnhanceEnabled ? "Prompt enhancement enabled" : "Enable AI prompt enhancement"}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; }}
             onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
           >
-            {isEnhancing ? <Loader2 size={20} className="animate-spin" /> : <Plus size={22} />}
+            <Wand2 size={20} />
           </button>
 
           {/* Text Input */}
@@ -295,19 +298,19 @@ export default function ChatInterface() {
               </button>
             </div>
 
-            {/* Send Button */}
             <button
               type="submit"
-              disabled={!input.trim()}
+              disabled={!input.trim() || isGenerating}
               style={{
                 background: 'var(--primary)', color: '#fff', border: 'none',
                 borderRadius: '10px', padding: '10px 16px', fontWeight: 600,
-                cursor: !input.trim() ? 'not-allowed' : 'pointer', fontSize: '0.9rem',
-                opacity: !input.trim() ? 0.6 : 1, display: 'flex', alignItems: 'center',
+                cursor: (!input.trim() || isGenerating) ? 'not-allowed' : 'pointer', fontSize: '0.9rem',
+                opacity: (!input.trim() || isGenerating) ? 0.6 : 1, display: 'flex', alignItems: 'center',
                 justifyContent: 'center', gap: '6px', transition: 'background 0.2s'
               }}
             >
-              <Send size={16} /> Send
+              {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} 
+              {isGenerating ? 'Sending...' : 'Send'}
             </button>
           </div>
         </form>

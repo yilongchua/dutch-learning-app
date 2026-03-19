@@ -100,31 +100,38 @@ export default function NewsCard({ item }: { item: NewsItem }) {
 
       {/* Captions */}
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-        {item.output_captions.map((caption, idx) => {
-          const isGrammar = caption.startsWith('[Grammar Breakdown]:');
-          const text = isGrammar ? caption.replace('[Grammar Breakdown]:', '').trim() : caption;
-          if (isGrammar) {
+        {(() => {
+          const captionsArray = Array.isArray(item.output_captions)
+            ? item.output_captions
+            : typeof item.output_captions === 'string'
+              ? (item.output_captions as string).split('\n').filter((s: string) => s.trim().length > 0)
+              : [];
+          return captionsArray.map((caption: string, idx: number) => {
+            const isGrammar = caption.startsWith('[Grammar Breakdown]:');
+            const text = isGrammar ? caption.replace('[Grammar Breakdown]:', '').trim() : caption;
+            if (isGrammar) {
+              return (
+                <div key={idx} style={{
+                  padding: '10px 14px', borderRadius: 12,
+                  background: 'rgba(96,165,250,0.08)', borderLeft: '3px solid #60a5fa',
+                  color: '#93c5fd', fontSize: '0.82rem', fontStyle: 'italic',
+                }}>
+                  <span style={{ fontWeight: 700, marginRight: 6 }}>💡 Regel:</span>{text}
+                </div>
+              );
+            }
             return (
-              <div key={idx} style={{
-                padding: '10px 14px', borderRadius: 12,
-                background: 'rgba(96,165,250,0.08)', borderLeft: '3px solid #60a5fa',
-                color: '#93c5fd', fontSize: '0.82rem', fontStyle: 'italic',
+              <p key={idx} style={{
+                fontSize: idx % 2 === 0 ? '0.95rem' : '0.82rem',
+                fontWeight: idx % 2 === 0 ? 600 : 400,
+                color: idx % 2 === 0 ? 'var(--text-light)' : 'var(--text-muted)',
+                lineHeight: 1.6,
               }}>
-                <span style={{ fontWeight: 700, marginRight: 6 }}>💡 Regel:</span>{text}
-              </div>
+                {text}
+              </p>
             );
-          }
-          return (
-            <p key={idx} style={{
-              fontSize: idx % 2 === 0 ? '0.95rem' : '0.82rem',
-              fontWeight: idx % 2 === 0 ? 600 : 400,
-              color: idx % 2 === 0 ? 'var(--text-light)' : 'var(--text-muted)',
-              lineHeight: 1.6,
-            }}>
-              {text}
-            </p>
-          );
-        })}
+          });
+        })()}
 
         {item.breakdown_sentences && item.breakdown_sentences.length > 0 && (
           <div style={{

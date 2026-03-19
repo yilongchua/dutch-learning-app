@@ -1,5 +1,6 @@
 import sys
 import os
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -11,13 +12,14 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from backend.config.config import settings
 from backend.app.dutch.router import router as dutch_router
-from backend.app.thenews.main import router as news_router
+from backend.app.thenews.router import router as news_router
 from backend.app.thenews.schema.news_item import NewsItem
 from backend.app.dutch.schema.schemas import ExerciseContent
 from backend.app.dutch.core.database import init_db as init_dutch_db
 from backend.app.thenews.core.database import init_db as init_news_db
 from backend.app.graphics_generation.router import router as graphics_generation_router
 from backend.app.graphics_generation.core.database import init_db as init_graphics_db
+from backend.app.thenews.service.image_sync_service import background_image_sync
 
 # Ensure all models are registered in SQLModel's metadata
 # We import them above to trigger the registration
@@ -36,6 +38,9 @@ async def lifespan(app: FastAPI):
     # Create necessary folders
     os.makedirs(settings.IMAGE_DIR, exist_ok=True)
     os.makedirs(settings.AUDIO_DIR, exist_ok=True)
+    
+    # Start background sync
+    asyncio.create_task(background_image_sync())
     
     yield
 
