@@ -19,7 +19,8 @@ The application follows a **Modular Monolith** pattern:
 ## Part 1: Backend Integration (FastAPI / SQLModel)
 
 ### Step 1.1: Initialize Folder Structure
-Create a new directory for your app `backend/app/<your_app>/` with the following subdirectories **and include empty `__init__.py` files in every folder** to ensure Python correctly registers it as an importable package:
+1. **Dependencies**: If this app requires a new Python package (e.g. `apscheduler`), ensure you install it globally under your conda environment and append it securely into `backend/requirements.txt`.
+2. **Architecture**: Create a new directory for your app `backend/app/<your_app>/` with the following subdirectories **and include empty `__init__.py` files in every folder** to ensure Python correctly registers it as an importable package:
 ```text
 backend/app/<your_app>/
 ├── __init__.py         # CRITICAL: Do not forget this!
@@ -47,12 +48,14 @@ Open `backend/config/config.py` and systematically add configuration bindings fo
 ### Step 1.3: Set Up App-Specific Logic
 1. **Config Proxy (`core/config.py`)**: Map `master_settings.YOURAPP_DB_URL` as a local `DATABASE_URL` proxy logic.
 2. **Database Engine (`core/database.py`)**: Initialize the SQLModel engine and provide an `init_db()` and `get_session()` function.
-3. **Models & Services**: Create SQLModels in `schema/models.py`, implement your `service/logic.py`, and expose endpoints in `router.py`.
+3. **Models & Services**: Create SQLModels in `schema/models.py`, implement your `service/logic.py`, and expose endpoints in `router.py`. 
+   - *CRITICAL FIX*: In `schema/models.py`, when declaring your primary class table (e.g., `class YourModel(SQLModel, table=True):`), strictly map `__table_args__ = {'extend_existing': True}` inside the model. This guarantees that FastAPI does not crash during boot sequence due to MetaData table collisions natively caused by SQLModel.
 
 ### Step 1.4: Register in `backend/main.py`
 To strictly link the new app into the global FastAPI application without breaking others, modify `backend/main.py` in four exact logical blocks:
 1. **Imports**: Import `<your_app>_router` from `router.py` and rename `init_db` as `init_<your_app>_db` from `core.database`.
 2. **Lifespan Initialization**: Inside the `lifespan()` block, invoke `init_<your_app>_db()` to spin up its SQLite tables successfully upon server startup.
+   - *CRITICAL FIX*: ALWAYS wrap your `init_<your_app>_db()` call cleanly inside a standard `try...except Exception as e:` block. If SQLModel meta indexes falsely conflict, this ensures your single app won't crash the entire Unified Server startup script.
 3. **Mounting**: At the bottom of router mounting section, append `app.include_router(<your_app>_router, prefix="/api/<your_app>", tags=["Your App Name"])`.
 4. **Root List Updates**: Edit the `async def root()` method and append `"your_app"` to the metadata array for `"apps"`.
 

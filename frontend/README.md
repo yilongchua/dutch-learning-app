@@ -1,20 +1,35 @@
-# Welcome to React Router!
+# YL Unified Application Frontend
 
-A modern, production-ready template for building full-stack React applications using React Router.
+A modern, fast, and feature-rich unified frontend interface built with **React Router v7** and styled with a sleek glassmorphic design and **TailwindCSS** compatible conventions.
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/remix-run/react-router-templates/tree/main/default)
+## 🚀 Features & Modules
 
-## Features
+This frontend successfully integrates the backend decoupled micro-apps into a single user interface:
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+- **The News**: Auto-generated news reading feeds.
+- **Dutch B1**: An interactive portal for writing, speaking, and listening exercises.
+- **Scheduler (Tasks)**: A dynamic form to manage, deploy, and delete `APScheduler` background cron jobs dynamically.
+- **Media Gallery**: An infinite-scroll gallery to view all generated images and `.mp4` videos with native CSS transitions.
+- **Graphics Generator**: An endpoint UI to generate isolated text-to-image/video prompts dynamically.
 
-## Getting Started
+## 📁 Project Structure
+
+```text
+frontend/
+├── app/
+│   ├── components/
+│   │   ├── layout/        # Defines the overarching Navbar
+│   │   ├── dutch/         # UI sections isolated for Dutch logic
+│   │   └── thenews/       # UI sections isolated for TheNews logic
+│   ├── routes/            # Core React Router pages mapped to endpoints
+│   ├── services/          # Axios API layers abstracting logic
+│   ├── root.tsx           # Base Root component
+│   └── routes.ts          # Central React Router mappings
+├── public/                # Static assets
+└── package.json
+```
+
+## 🛠 Getting Started
 
 ### Installation
 
@@ -32,56 +47,10 @@ Start the development server with HMR:
 npm run dev
 ```
 
-Your application will be available at `http://localhost:5173`.
+Your application will be available at `http://localhost:5173`. Make sure the Python Fast API server is already running to consume data.
 
-## Building for Production
-
-Create a production build:
-
-```bash
-npm run build
-```
-
-## Deployment
-
-### Docker Deployment
-
-To build and run using Docker:
-
-```bash
-docker build -t my-app .
-
-# Run the container
-docker run -p 3000:3000 my-app
-```
-
-The containerized application can be deployed to any platform that supports Docker, including:
-
-- AWS ECS
-- Google Cloud Run
-- Azure Container Apps
-- Digital Ocean App Platform
-- Fly.io
-- Railway
-
-### DIY Deployment
-
-If you're familiar with deploying Node applications, the built-in app server is production-ready.
-
-Make sure to deploy the output of `npm run build`
-
-```
-├── package.json
-├── package-lock.json (or pnpm-lock.yaml, or bun.lockb)
-├── build/
-│   ├── client/    # Static assets
-│   └── server/    # Server-side code
-```
-
-## Styling
-
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
+### Styling System
+This platform explicitly uses native DOM configurations mixed with a heavy emphasis on dynamic glassmorphism. See `index.css` for the complete token layout.
 
 ---
-
-Built with ❤️ using React Router.
+Built seamlessly to orchestrate multiple backend micro-apps gracefully.

@@ -7,6 +7,8 @@ import {
   Headphones,
   ChevronDown,
   Image,
+  CalendarClock,
+  Images,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -48,6 +50,24 @@ const sections: NavSection[] = [
       { title: 'Create', path: '/graphics-generation', icon: <Image size={15} /> },
     ],
   },
+  {
+    label: 'Tasks',
+    icon: <CalendarClock size={16} />,
+    color: '#4ade80',
+    accent: 'rgba(74,222,128,0.15)',
+    items: [
+      { title: 'Scheduler', path: '/scheduler', icon: <CalendarClock size={15} /> },
+    ],
+  },
+  {
+    label: 'Gallery',
+    icon: <Images size={16} />,
+    color: '#f472b6',
+    accent: 'rgba(244,114,182,0.15)',
+    items: [
+      { title: 'Media Library', path: '/gallery', icon: <Images size={15} /> },
+    ],
+  },
 ];
 
 export default function Navbar() {
@@ -67,28 +87,11 @@ export default function Navbar() {
         maxWidth: '1100px',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
         padding: '10px 20px',
         boxShadow: '0 8px 40px rgba(0,0,0,0.4)',
       }}
     >
-      {/* Logo */}
-      <NavLink
-        to="/"
-        style={{ display: 'flex', alignItems: 'center', gap: '10px', textDecoration: 'none' }}
-      >
-        <div style={{
-          width: 32, height: 32, borderRadius: 10,
-          background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-        }}>
-          <GraduationCap size={18} color="#fff" />
-        </div>
-        <span style={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.5px', color: 'var(--text-light)' }}>
-          YL<span style={{ color: 'var(--primary)' }}>App</span>
-        </span>
-      </NavLink>
-
       {/* Nav Sections */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
         {sections.map((section) => {
@@ -179,29 +182,29 @@ export default function Navbar() {
                       animation: 'fadeIn 0.15s ease',
                     }}
                   >
-                  {section.items.map((item) => (
-                    <NavLink
-                      key={item.path}
-                      to={item.path}
-                      style={({ isActive }) => ({
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        padding: '9px 12px',
-                        borderRadius: '9px',
-                        textDecoration: 'none',
-                        color: isActive ? section.color : 'var(--text-light)',
-                        background: isActive ? section.accent : 'transparent',
-                        fontWeight: isActive ? 700 : 500,
-                        fontSize: '0.88rem',
-                        transition: 'all 0.15s',
-                      })}
-                      end
-                    >
-                      {item.icon}
-                      {item.title}
-                    </NavLink>
-                  ))}
+                    {section.items.map((item) => (
+                      <NavLink
+                        key={item.path}
+                        to={item.path}
+                        style={({ isActive }) => ({
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '9px 12px',
+                          borderRadius: '9px',
+                          textDecoration: 'none',
+                          color: isActive ? section.color : 'var(--text-light)',
+                          background: isActive ? section.accent : 'transparent',
+                          fontWeight: isActive ? 700 : 500,
+                          fontSize: '0.88rem',
+                          transition: 'all 0.15s',
+                        })}
+                        end
+                      >
+                        {item.icon}
+                        {item.title}
+                      </NavLink>
+                    ))}
                   </div>
                 </div>
               )}

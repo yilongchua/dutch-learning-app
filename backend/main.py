@@ -4,6 +4,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 # Ensure the project root is in sys.path
@@ -20,6 +21,8 @@ from backend.app.thenews.core.database import init_db as init_news_db
 from backend.app.graphics_generation.router import router as graphics_generation_router
 from backend.app.graphics_generation.core.database import init_db as init_graphics_db
 from backend.app.thenews.service.image_sync_service import background_image_sync
+from backend.app.scheduler.router import router as scheduler_router
+from backend.app.scheduler.service.scheduler_service import scheduler_service
 
 # Ensure all models are registered in SQLModel's metadata
 # We import them above to trigger the registration
@@ -28,12 +31,25 @@ from backend.app.thenews.service.image_sync_service import background_image_sync
 async def lifespan(app: FastAPI):
     # Initialize Databases
     print(f"Initializing Dutch DB at {settings.DUTCH_DB_URL}")
-    init_dutch_db()
+    try:
+        init_dutch_db()
+    except Exception as e:
+        print(f"DB Init Warning (Dutch): {e}")
+
     print(f"Initializing News DB at {settings.THENEWS_DB_URL}")
-    init_news_db()
+    try:
+        init_news_db()
+    except Exception as e:
+        print(f"DB Init Warning (News): {e}")
     
     print(f"Initializing Graphics Generation DB at {settings.GRAPHICS_GENERATION_DB_URL}")
-    init_graphics_db()
+    try:
+        init_graphics_db()
+    except Exception as e:
+        print(f"DB Init Warning (Graphics): {e}")
+    
+    # Start Scheduler (JSON-based, no DB init needed)
+    scheduler_service.start()
     
     # Create necessary folders
     os.makedirs(settings.IMAGE_DIR, exist_ok=True)
@@ -59,9 +75,19 @@ app.add_middleware(
 )
 
 # Mount Routers
-app.include_router(dutch_router, prefix="")
-app.include_router(news_router, prefix="")
+app.include_router(dutch_router, prefix="/api/dutch")
+app.include_router(news_router, prefix="/api/news")
 app.include_router(graphics_generation_router, prefix="/api/graphics_generation", tags=["Graphics Generation"])
+app.include_router(scheduler_router, prefix="/api/scheduler", tags=["Scheduler"])
+
+# Media Library alias (for gallery)
+from backend.app.graphics_generation.router import get_gallery
+@app.get("/api/media_library")
+async def media_library_root():
+    return get_gallery()
+
+# Mount static files
+app.mount("/images", StaticFiles(directory=settings.IMAGE_DIR), name="images")
 
 @app.get("/")
 async def root():

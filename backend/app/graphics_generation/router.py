@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+import os
+from backend.config.config import settings
 from sqlmodel import Session, select
 from typing import List
 from pydantic import BaseModel
@@ -57,3 +59,15 @@ def delete_history_item(item_id: int, session: Session = Depends(get_session)):
 async def check_status(prompt_id: str):
     status = await service.check_status(prompt_id)
     return status
+
+@router.get("/gallery")
+def get_gallery():
+    # List all generated files in IMAGE_DIR
+    files = []
+    if os.path.exists(settings.IMAGE_DIR):
+        for f in os.listdir(settings.IMAGE_DIR):
+            if f.endswith((".png", ".jpg", ".jpeg", ".mp4", ".webp")):
+                files.append(f)
+    # Sort files by creation time or just alphabetically
+    files.sort(reverse=True)
+    return {"images": [f"/images/{file}" for file in files]}

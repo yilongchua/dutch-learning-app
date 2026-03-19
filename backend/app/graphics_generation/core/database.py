@@ -1,12 +1,12 @@
 from sqlmodel import SQLModel, create_engine, Session
-from .config import settings
+from backend.config.config import settings
 
 # Create engine; echo=False for normal operation
 engine = create_engine(
-    settings.DATABASE_URL,
+    settings.GRAPHICS_GENERATION_DB_URL,
     echo=False,
     connect_args={"check_same_thread": False}
-    if "sqlite" in settings.DATABASE_URL else {}
+    if "sqlite" in settings.GRAPHICS_GENERATION_DB_URL else {}
 )
 
 def init_db() -> None:

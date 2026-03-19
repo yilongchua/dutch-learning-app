@@ -10,7 +10,7 @@ from backend.app.thenews.schema.news_item import NewsItem, NewsItemRead
 from backend.app.thenews.content_generation import ContentGenerator
 from fastapi import BackgroundTasks
 
-router = APIRouter(prefix="/api/v1", tags=["news"])
+router = APIRouter(tags=["news"])
 @router.get("/")
 async def news_root():
     return {"status": "online", "app": "thenews"}

@@ -1,9 +1,9 @@
 import axios from 'axios';
 import type { NewsItem } from '~/components/thenews/NewsCard';
 
-const BASE_URL = (import.meta.env.VITE_NEWS_API_URL as string) || 'http://localhost:8010/api/v1/';
+const BASE_URL = (import.meta.env.VITE_NEWS_API_URL as string) || 'http://localhost:8010/api/news';
 
-export const MEDIA_BASE = (import.meta.env.VITE_NEWS_MEDIA_URL as string) || 'http://localhost:8010';
+export const MEDIA_BASE = (import.meta.env.VITE_MEDIA_BASE_URL as string) || 'http://localhost:8010';
 
 const api = axios.create({ baseURL: BASE_URL, timeout: 120000 });
 

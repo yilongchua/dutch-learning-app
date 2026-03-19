@@ -42,5 +42,5 @@ class LocalLLMService(LLMBase):
         result = await self.generate_output(system_prompt, user_prompt, response_model=ImagePromptsExtracted)
         for info in result.image_prompts:
             id_name = f"thenews/{news_item.theme}_{str(uuid.uuid4())}"
-            news_item.images_info.append(ImageInfo(image_id=id_name, img_path=str(settings.COMFYUI_DIR)+f"/{id_name}.jpg", image_prompt=info ))
+            news_item.images_info.append(ImageInfo(image_id=id_name, img_path=str(settings.COMFYUI_DIR)+f"/{id_name}.png", image_prompt=info ))
         return news_item

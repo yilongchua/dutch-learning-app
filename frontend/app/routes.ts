@@ -8,4 +8,6 @@ export default [
   route('dutch/speaking', 'routes/dutch.speaking.tsx'),
   route('dutch/listening', 'routes/dutch.listening.tsx'),
   route('graphics-generation', 'routes/graphics_generation.tsx'),
+  route('scheduler', 'routes/scheduler.tsx'),
+  route('gallery', 'routes/gallery.tsx'),
 ] satisfies RouteConfig;

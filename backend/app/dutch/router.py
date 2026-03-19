@@ -17,7 +17,7 @@ from backend.base.asr import ASRService
 from backend.base.tts import TTSService
 from backend.config.config import settings
 
-router = APIRouter(prefix="/api", tags=["dutch"])
+router = APIRouter(tags=["dutch"])
 
 # Services instances
 llm_service = LocalLLMService()
