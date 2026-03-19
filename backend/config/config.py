@@ -17,8 +17,11 @@ for new_dir in [DUTCH_DATA_DIR, THENEWS_DATA_DIR, GRAPHICS_GENERATION_DATA_DIR]:
     os.makedirs(new_dir, exist_ok=True)
 
 class Settings(BaseSettings):
-    # App Names for prefixes
     APP_NAME: str = "YL Unified App"
+    
+    # Connection Ports
+    BACKEND_PORT: int = Field(default=8010, env="BACKEND_PORT")
+    FRONTEND_PORT: int = Field(default=5173, env="FRONTEND_PORT")
     
     # Database Settings
     DUTCH_DB_URL: str = Field(
@@ -72,7 +75,12 @@ class Settings(BaseSettings):
         env="AUDIO_DIR"
     )
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    # Load from the project root .env
+    model_config = SettingsConfigDict(
+        env_file=BASE_DIR.parent / ".env", 
+        env_file_encoding="utf-8", 
+        extra="ignore"
+    )
 
 settings = Settings()
 
