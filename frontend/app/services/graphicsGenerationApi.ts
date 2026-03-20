@@ -3,7 +3,11 @@ import axios from 'axios';
 const BASE_URL = (import.meta.env.VITE_GRAPHICS_API_URL as string) || 'http://localhost:8010/api/graphics_generation/';
 export const COMFY_URL = (import.meta.env.VITE_COMFYUI_URL as string) || 'http://localhost:8188';
 
-const api = axios.create({ baseURL: BASE_URL, timeout: 300000 });
+const api = axios.create({ 
+  baseURL: BASE_URL, 
+  timeout: 300000,
+  headers: { 'skip_zrok_interstitial': 'true' }
+});
 
 export interface GraphicsItem {
   id: number;

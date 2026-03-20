@@ -6,7 +6,7 @@ const api = axios.create({
   baseURL: BASE_URL,
   timeout: 300000, // 300s (5m) — LLM agents can be very slow
   headers: {
-    'zrok-skip-browser-verify-warning': 'true',
+    'skip_zrok_interstitial': 'true',
   },
 });
 
