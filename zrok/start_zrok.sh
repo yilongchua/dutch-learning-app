@@ -3,8 +3,8 @@
 # Configuration
 BACKEND_PORT=8010
 FRONTEND_PORT=5173
-BACKEND_NAME="dutchb1api"
-FRONTEND_NAME="dutchb1app"
+BACKEND_NAME="dutchb1apiv2"
+FRONTEND_NAME="dutchb1appv2"
 
 echo "🚀 Starting zrok tunnels with custom names..."
 
@@ -39,7 +39,7 @@ echo "✅ Backend URL: $BACKEND_URL"
 
 # Update Frontend .env
 echo "📝 Updating frontend .env with public backend URL..."
-echo "VITE_API_BASE_URL=$BACKEND_URL/api" > frontend/.env
+echo "VITE_API_BASE_URL=$BACKEND_URL/api" > ../frontend/.env
 
 # Start Frontend Tunnel
 echo "📡 Exposing Frontend as $FRONTEND_NAME on port $FRONTEND_PORT..."

@@ -18,7 +18,7 @@ from backend.app.dutch.service.evaluator import EvaluatorService
 from backend.app.dutch.service.exercise_queue import exercise_queue_service
 from backend.base.asr import ASRService
 from backend.base.tts import TTSService
-from backend.config.config import settings
+from backend.config.config import settings, DATA_DIR
 
 router = APIRouter(tags=["dutch"])
 
@@ -51,9 +51,9 @@ import random
 
 @router.get("/generate-theme")
 async def generate_theme():
-    theme_path = os.path.join(os.path.dirname(__file__), "../../../data/app/dutch/theme.json")
+    theme_path = BASE_DIR / "app" / "dutch"/"theme.json"
     try:
-        with open(theme_path, 'r', encoding='utf-8') as f:
+        with open(str(theme_path), 'r', encoding='utf-8') as f:
             data = json.load(f)
             themes = data.get('theme', [])
             if themes:

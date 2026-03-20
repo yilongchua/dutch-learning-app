@@ -8,6 +8,7 @@ from backend.app.dutch.core.database import engine, init_db
 from backend.app.dutch.service.llm_service import LocalLLMService
 from backend.base.tts import TTSService
 from backend.app.dutch.core.config import settings
+from backend.config.config import DATA_DIR
 class ExerciseGenerator:
     def __init__(self):
         self.llm = LocalLLMService()
@@ -17,9 +18,9 @@ class ExerciseGenerator:
         self.current_theme = ""
         
     def _load_themes(self) -> list[str]:
-        theme_path = os.path.join(os.path.dirname(__file__), "../../../data/app/dutch/theme.json")
+        theme_path = DATA_DIR / "app"/"dutch"/"theme.json"
         try:
-            with open(theme_path, 'r', encoding='utf-8') as f:
+            with open(str(theme_path), 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 return data.get('theme', [])
         except Exception as e:
