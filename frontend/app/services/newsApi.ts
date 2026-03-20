@@ -1,9 +1,10 @@
 import axios from 'axios';
 import type { NewsItem } from '~/components/thenews/NewsCard';
+import { resolveApiBaseUrl, resolveMediaBaseUrl } from './apiConfig';
 
-const BASE_URL = (import.meta.env.VITE_NEWS_API_URL as string) || 'http://localhost:8010/api/news';
+const BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_NEWS_API_URL as string | undefined, '/api/news');
 
-export const MEDIA_BASE = (import.meta.env.VITE_MEDIA_BASE_URL as string) || 'http://localhost:8010';
+export const MEDIA_BASE = resolveMediaBaseUrl(import.meta.env.VITE_MEDIA_BASE_URL as string | undefined);
 
 const api = axios.create({ 
   baseURL: BASE_URL, 

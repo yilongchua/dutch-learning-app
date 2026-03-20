@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { resolveApiBaseUrl } from './apiConfig';
 
-const BASE_URL = import.meta.env.VITE_SCHEDULER_API_URL || 'http://localhost:8010/api/scheduler';
+const BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_SCHEDULER_API_URL as string | undefined, '/api/scheduler');
 
 const api = axios.create({ 
   baseURL: BASE_URL, 

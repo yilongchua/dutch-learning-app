@@ -1,6 +1,7 @@
 import axios from 'axios';
+import { resolveApiBaseUrl } from './apiConfig';
 
-const BASE_URL = (import.meta.env.VITE_DUTCH_API_URL as string) || 'http://localhost:8010/api/dutch';
+const BASE_URL = resolveApiBaseUrl(import.meta.env.VITE_DUTCH_API_URL as string | undefined, '/api/dutch');
 
 const api = axios.create({
   baseURL: BASE_URL,

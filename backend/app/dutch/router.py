@@ -51,7 +51,7 @@ import random
 
 @router.get("/generate-theme")
 async def generate_theme():
-    theme_path = BASE_DIR / "app" / "dutch"/"theme.json"
+    theme_path = DATA_DIR / "app" / "dutch" / "theme.json"
     try:
         with open(str(theme_path), 'r', encoding='utf-8') as f:
             data = json.load(f)

@@ -78,6 +78,7 @@ fi
 # Update Frontend .env with the keys actually used by frontend services
 echo "📝 Updating frontend .env with public backend URL..."
 cat > ../frontend/.env <<EOF
+VITE_API_BASE_URL=$BACKEND_URL
 VITE_DUTCH_API_URL=$BACKEND_URL/api/dutch
 VITE_NEWS_API_URL=$BACKEND_URL/api/news
 VITE_GRAPHICS_API_URL=$BACKEND_URL/api/graphics_generation/
