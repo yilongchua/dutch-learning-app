@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { getExercise, evaluateSpeaking, generateTheme } from '~/services/dutchApi';
+import { useDutchSession } from '~/context/dutchSession';
 import { Mic, Square, CheckCircle, AlertCircle, RefreshCcw } from 'lucide-react';
 import { WavRecorder } from '~/utils/audioUtils';
 import type { Route } from './+types/dutch.speaking';
@@ -13,7 +14,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 interface Keyword { dutch: string; english: string; }
-interface Exercise { theme: string; prompt: string; keywords?: Keyword[]; }
+interface Exercise { id?: number; theme: string; prompt: string; question?: string; keywords?: Keyword[]; }
 interface SpeakingResult {
   transcription: string;
   score: number;
@@ -23,10 +24,19 @@ interface SpeakingResult {
 }
 
 export default function SpeakingPage() {
-  const [exercise, setExercise] = useState<Exercise | null>(null);
+  const {
+    state,
+    hydrated,
+    speakingAudioBlob,
+    setCurrentTheme,
+    setSpeakingState,
+    resetSpeakingState,
+    setSpeakingAudioBlob,
+  } = useDutchSession();
+
+  const exercise = state.speaking.exercise as Exercise | null;
+  const result = state.speaking.result as SpeakingResult | null;
   const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const [result, setResult] = useState<SpeakingResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const recorder = useRef<WavRecorder | null>(null);
@@ -34,38 +44,46 @@ export default function SpeakingPage() {
   const fetchNewExercise = async (ignoreCache = false) => {
     setLoading(true);
     try {
-      let theme = localStorage.getItem('current_theme') || 'Dagelijkse routine';
-      const cacheKey = 'speaking_exercise_cache';
-      const cached = localStorage.getItem(cacheKey);
-      if (!ignoreCache && cached) {
-        const p = JSON.parse(cached);
-        if (p.theme === theme) { setExercise(p); setLoading(false); return; }
-      }
+      let theme = state.currentTheme || 'Dagelijkse routine';
       if (ignoreCache) {
         const r = await generateTheme(theme);
         theme = r.data.theme;
-        localStorage.setItem('current_theme', theme);
-        localStorage.removeItem('writing_exercise_cache');
-        localStorage.removeItem('listening_exercise_cache');
       }
+
       const res = await getExercise('speaking', theme);
-      setExercise(res.data);
-      localStorage.setItem(cacheKey, JSON.stringify(res.data));
-      setResult(null); setAudioBlob(null); setError(null);
+      const mapped = {
+        ...res.data,
+        prompt: res.data.question || res.data.prompt,
+      };
+      setCurrentTheme(mapped.theme || theme);
+      setSpeakingState({
+        exercise: mapped,
+        result: null,
+        hasRecording: false,
+      });
+      setSpeakingAudioBlob(null);
+      setError(null);
     } catch {
       setError('Unable to connect to the Dutch B1 server.');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchNewExercise(false); }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!exercise) {
+      fetchNewExercise(false);
+    }
+  }, [hydrated]);
 
   const startRecording = async () => {
     try {
       if (!recorder.current) recorder.current = new WavRecorder();
       await recorder.current.start();
       setIsRecording(true);
-      setAudioBlob(null);
-      setResult(null);
+      setSpeakingAudioBlob(null);
+      setSpeakingState({ hasRecording: false, result: null });
     } catch {
       alert('Microphone access required. Please grant permission.');
     }
@@ -74,29 +92,41 @@ export default function SpeakingPage() {
   const stopRecording = () => {
     if (recorder.current) {
       const blob = recorder.current.stop();
-      setAudioBlob(blob);
+      setSpeakingAudioBlob(blob);
+      setSpeakingState({ hasRecording: true });
       setIsRecording(false);
     }
   };
 
   const handleSubmit = async () => {
-    if (!audioBlob || !exercise) return;
+    if (!speakingAudioBlob || !exercise) return;
     setLoading(true);
     const formData = new FormData();
-    formData.append('audio', audioBlob, 'speaking.wav');
+    formData.append('audio', speakingAudioBlob, 'speaking.wav');
+    if (exercise.id) {
+      formData.append('exercise_id', String(exercise.id));
+    }
     formData.append('user_id', 'local_user');
     formData.append('theme', exercise.theme);
-    formData.append('prompt', exercise.prompt);
+    formData.append('prompt', exercise.prompt || exercise.question || '');
     formData.append('date', new Date().toISOString().split('T')[0]);
     formData.append('keywords', JSON.stringify(exercise.keywords || []));
     try {
       const res = await evaluateSpeaking(formData);
-      setResult(res.data);
-    } catch { /* silent */ }
-    finally { setLoading(false); }
+      setSpeakingState({ result: res.data });
+    } catch {
+      // keep existing silent flow
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!exercise && loading) return (
+  const handleNewExercise = async () => {
+    resetSpeakingState();
+    await fetchNewExercise(true);
+  };
+
+  if ((!exercise && loading) || !hydrated) return (
     <div className="page-container" style={{ textAlign: 'center', paddingTop: '120px' }}>
       <RefreshCcw className="spinning" size={36} color="var(--secondary)" />
       <h2 style={{ marginTop: '20px' }}>Generating Your Scenario...</h2>
@@ -108,7 +138,7 @@ export default function SpeakingPage() {
       <AlertCircle size={48} color="var(--error)" />
       <h2 style={{ marginTop: '20px' }}>Connection Issue</h2>
       <p style={{ color: 'var(--text-muted)', margin: '12px auto 24px', maxWidth: 480 }}>{error}</p>
-      <button className="btn btn-primary" onClick={() => fetchNewExercise(true)}>Try Again</button>
+      <button className="btn btn-primary" onClick={handleNewExercise}>Try Again</button>
     </div>
   );
 
@@ -120,13 +150,12 @@ export default function SpeakingPage() {
         <div>
           <h1>Speaking Practice</h1>
         </div>
-        <button className="btn btn-secondary" onClick={() => fetchNewExercise(true)} disabled={loading}>
+        <button className="btn btn-secondary" onClick={handleNewExercise} disabled={loading}>
           <RefreshCcw size={16} /> New Exercise
         </button>
       </header>
 
       <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {/* Scenario */}
         <section className="glass card" style={{ textAlign: 'center' }}>
           <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(46,196,182,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
             <Mic size={28} color="var(--secondary)" />
@@ -170,9 +199,9 @@ export default function SpeakingPage() {
               </motion.button>
             )}
 
-            {audioBlob && !isRecording && (
+            {speakingAudioBlob && !isRecording && (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px', width: '100%' }}>
-                <audio controls src={URL.createObjectURL(audioBlob)} style={{ width: '100%' }} />
+                <audio controls src={URL.createObjectURL(speakingAudioBlob)} style={{ width: '100%' }} />
                 <button className="btn btn-primary" onClick={handleSubmit} disabled={loading} style={{ width: '200px' }}>
                   {loading ? 'Analyzing...' : 'Submit Speaking'}
                 </button>
@@ -181,7 +210,6 @@ export default function SpeakingPage() {
           </div>
         </section>
 
-        {/* Results */}
         {result && (
           <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }}>
             <div className="glass card" style={{ border: '2px solid var(--secondary)', marginBottom: '20px' }}>

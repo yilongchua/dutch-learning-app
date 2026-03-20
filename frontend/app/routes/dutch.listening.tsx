@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import dutchApi, { getExercise, generateTheme } from '~/services/dutchApi';
-import { Headphones, Play, Pause, CheckCircle, AlertCircle, RefreshCcw, FastForward } from 'lucide-react';
+import { useDutchSession } from '~/context/dutchSession';
+import { Play, Pause, CheckCircle, AlertCircle, RefreshCcw } from 'lucide-react';
 import type { Route } from './+types/dutch.listening';
 
 export function meta({}: Route.MetaArgs) {
@@ -12,6 +13,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 interface Exercise {
+  id?: number;
   theme: string;
   question: string;
   text: string;
@@ -21,9 +23,12 @@ interface Exercise {
 }
 
 export default function ListeningPage() {
-  const [exercise, setExercise] = useState<Exercise | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
-  const [showResult, setShowResult] = useState(false);
+  const { state, hydrated, setCurrentTheme, setListeningState, resetListeningState } = useDutchSession();
+  const exercise = state.listening.exercise as Exercise | null;
+  const selected = state.listening.selected;
+  const showResult = state.listening.showResult;
+  const playbackSpeed = state.listening.playbackSpeed;
+
   const [audioUrl, setAudioUrl] = useState('');
   const [loading, setLoading] = useState(false);
   const [audioLoading, setAudioLoading] = useState(false);
@@ -31,36 +36,46 @@ export default function ListeningPage() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const fetchNewExercise = async (ignoreCache = false) => {
     setLoading(true);
     try {
-      let theme = localStorage.getItem('current_theme') || 'Dagelijkse routine';
-      const cacheKey = 'listening_exercise_cache';
-      const cached = localStorage.getItem(cacheKey);
-      if (!ignoreCache && cached) {
-        const p = JSON.parse(cached);
-        if (p.theme === theme) { setExercise(p); setAudioUrl(''); setLoading(false); return; }
-      }
+      let theme = state.currentTheme || 'Dagelijkse routine';
       if (ignoreCache) {
         const r = await generateTheme(theme);
         theme = r.data.theme;
-        localStorage.setItem('current_theme', theme);
-        localStorage.removeItem('writing_exercise_cache');
-        localStorage.removeItem('speaking_exercise_cache');
       }
+
       const res = await getExercise('listening', theme);
-      setExercise(res.data);
-      localStorage.setItem(cacheKey, JSON.stringify(res.data));
-      setAudioUrl(''); setSelected(null); setShowResult(false); setError(null);
+      const mapped = {
+        ...res.data,
+        text: res.data.audio_text || res.data.text || '',
+        english_translation: res.data.audio_translation || res.data.english_translation || '',
+      };
+      setCurrentTheme(mapped.theme || theme);
+      setListeningState({
+        exercise: mapped,
+        selected: null,
+        showResult: false,
+      });
+      setAudioUrl('');
+      setCurrentTime(0);
+      setDuration(0);
+      setError(null);
     } catch {
       setError('Unable to connect to the Dutch B1 server.');
-    } finally { setLoading(false); }
+    } finally {
+      setLoading(false);
+    }
   };
 
-  useEffect(() => { fetchNewExercise(false); }, []);
+  useEffect(() => {
+    if (!hydrated) return;
+    if (!exercise) {
+      fetchNewExercise(false);
+    }
+  }, [hydrated]);
 
   const handlePlayAudio = async () => {
     if (audioUrl) {
@@ -73,8 +88,11 @@ export default function ListeningPage() {
       const res = await dutchApi.get('/tts', { params: { text: exercise.text }, responseType: 'blob' });
       const url = URL.createObjectURL(new Blob([res.data], { type: 'audio/wav' }));
       setAudioUrl(url);
-    } catch { /* ignore */ }
-    finally { setAudioLoading(false); }
+    } catch {
+      // keep existing silent flow
+    } finally {
+      setAudioLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -84,8 +102,13 @@ export default function ListeningPage() {
   const changeSpeed = () => {
     const speeds = [1, 1.25, 1.5, 0.75];
     const next = speeds[(speeds.indexOf(playbackSpeed) + 1) % speeds.length];
-    setPlaybackSpeed(next);
+    setListeningState({ playbackSpeed: next });
     if (audioRef.current) audioRef.current.playbackRate = next;
+  };
+
+  const handleNewExercise = async () => {
+    resetListeningState();
+    await fetchNewExercise(true);
   };
 
   const fmt = (t: number) => {
@@ -93,7 +116,7 @@ export default function ListeningPage() {
     return `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
   };
 
-  if (!exercise && loading) return (
+  if ((!exercise && loading) || !hydrated) return (
     <div className="page-container" style={{ textAlign: 'center', paddingTop: '120px' }}>
       <RefreshCcw className="spinning" size={36} color="var(--primary)" />
       <h2 style={{ marginTop: '20px' }}>Generating Listening Assignment...</h2>
@@ -105,7 +128,7 @@ export default function ListeningPage() {
       <AlertCircle size={48} color="var(--error)" />
       <h2 style={{ marginTop: '20px' }}>Connection Issue</h2>
       <p style={{ color: 'var(--text-muted)', margin: '12px auto 24px', maxWidth: 480 }}>{error}</p>
-      <button className="btn btn-primary" onClick={() => fetchNewExercise(true)}>Try Again</button>
+      <button className="btn btn-primary" onClick={handleNewExercise}>Try Again</button>
     </div>
   );
 
@@ -119,16 +142,16 @@ export default function ListeningPage() {
         <div>
           <h1>Listening Practice</h1>
         </div>
-        <button className="btn btn-secondary" onClick={() => fetchNewExercise(true)} disabled={loading}>
+        <button className="btn btn-secondary" onClick={handleNewExercise} disabled={loading}>
           <RefreshCcw size={16} /> New Exercise
         </button>
       </header>
 
       <div style={{ maxWidth: 680, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '24px' }}>
-        {/* Audio Player */}
         <section className="glass card">
           <audio
-            ref={audioRef} src={audioUrl}
+            ref={audioRef}
+            src={audioUrl}
             onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime || 0)}
             onLoadedMetadata={() => setDuration(audioRef.current?.duration || 0)}
             onPlay={() => setIsPlaying(true)}
@@ -138,13 +161,23 @@ export default function ListeningPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
             <motion.button
-              whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
               onClick={handlePlayAudio}
               disabled={audioLoading}
               style={{
-                width: 52, height: 52, borderRadius: '50%', background: 'var(--primary)',
-                border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                cursor: 'pointer', color: 'var(--bg-dark)', flexShrink: 0, boxShadow: '0 6px 20px var(--primary-glow)',
+                width: 52,
+                height: 52,
+                borderRadius: '50%',
+                background: 'var(--primary)',
+                border: 'none',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: 'var(--bg-dark)',
+                flexShrink: 0,
+                boxShadow: '0 6px 20px var(--primary-glow)',
               }}
             >
               {audioLoading ? <RefreshCcw className="spinning" size={22} /> : isPlaying ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" style={{ marginLeft: 2 }} />}
@@ -152,7 +185,11 @@ export default function ListeningPage() {
 
             <div style={{ flex: 1 }}>
               <input
-                type="range" min="0" max={duration || 0} step="0.1" value={currentTime}
+                type="range"
+                min="0"
+                max={duration || 0}
+                step="0.1"
+                value={currentTime}
                 onChange={(e) => {
                   const t = Number(e.target.value);
                   setCurrentTime(t);
@@ -165,11 +202,21 @@ export default function ListeningPage() {
               </div>
             </div>
 
-            <button onClick={changeSpeed} style={{
-              padding: '7px 12px', borderRadius: '9px', background: 'var(--card-bg)',
-              border: '1px solid var(--glass-border)', color: 'var(--text-light)', fontWeight: 700,
-              cursor: 'pointer', fontSize: '0.88rem', fontFamily: 'inherit', minWidth: 56,
-            }}>
+            <button
+              onClick={changeSpeed}
+              style={{
+                padding: '7px 12px',
+                borderRadius: '9px',
+                background: 'var(--card-bg)',
+                border: '1px solid var(--glass-border)',
+                color: 'var(--text-light)',
+                fontWeight: 700,
+                cursor: 'pointer',
+                fontSize: '0.88rem',
+                fontFamily: 'inherit',
+                minWidth: 56,
+              }}
+            >
               {playbackSpeed}x
             </button>
           </div>
@@ -179,19 +226,24 @@ export default function ListeningPage() {
           </p>
         </section>
 
-        {/* MCQ */}
         <section className="glass card">
           <h3 style={{ marginBottom: '20px' }}>{exercise.question}</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {exercise.options.map((opt) => (
               <button
                 key={opt}
-                onClick={() => !showResult && setSelected(opt)}
+                onClick={() => !showResult && setListeningState({ selected: opt })}
                 style={{
-                  padding: '14px 18px', borderRadius: '12px', textAlign: 'left', cursor: showResult ? 'default' : 'pointer',
+                  padding: '14px 18px',
+                  borderRadius: '12px',
+                  textAlign: 'left',
+                  cursor: showResult ? 'default' : 'pointer',
                   border: selected === opt ? '2px solid var(--primary)' : '1px solid var(--glass-border)',
                   background: selected === opt ? 'rgba(255,159,28,0.08)' : 'transparent',
-                  color: 'var(--text-light)', fontSize: '0.95rem', fontFamily: 'inherit', transition: 'all 0.2s',
+                  color: 'var(--text-light)',
+                  fontSize: '0.95rem',
+                  fontFamily: 'inherit',
+                  transition: 'all 0.2s',
                 }}
               >
                 {opt}
@@ -201,7 +253,7 @@ export default function ListeningPage() {
 
           <div style={{ marginTop: '28px' }}>
             {!showResult ? (
-              <button className="btn btn-primary" disabled={!selected} onClick={() => setShowResult(true)}>
+              <button className="btn btn-primary" disabled={!selected} onClick={() => setListeningState({ showResult: true })}>
                 Check Answer
               </button>
             ) : (

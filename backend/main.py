@@ -18,6 +18,7 @@ from backend.app.thenews.schema.news_item import NewsItem
 from backend.app.dutch.schema.schemas import ExerciseContent
 from backend.app.dutch.core.database import init_db as init_dutch_db
 from backend.app.thenews.core.database import init_db as init_news_db
+from backend.app.dutch.service.exercise_queue import exercise_queue_service
 from backend.app.graphics_generation.router import router as graphics_generation_router
 from backend.app.graphics_generation.core.database import init_db as init_graphics_db
 from backend.app.thenews.service.image_sync_service import background_image_sync
@@ -56,9 +57,14 @@ async def lifespan(app: FastAPI):
     os.makedirs(settings.AUDIO_DIR, exist_ok=True)
     
     # Start background sync
-    asyncio.create_task(background_image_sync())
-    
-    yield
+    image_sync_task = asyncio.create_task(background_image_sync())
+    exercise_queue_service.start_background_refill()
+
+    try:
+        yield
+    finally:
+        image_sync_task.cancel()
+        await exercise_queue_service.stop_background_refill()
 
 app = FastAPI(
     title=settings.APP_NAME,

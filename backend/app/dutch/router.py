@@ -2,17 +2,20 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 import os, sys
 # Add project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
-from sqlmodel import Session, select, func
+from sqlmodel import Session, select
 from typing import List, Optional
 import os
 import uuid
 from datetime import datetime
+from datetime import timezone
 from fastapi.responses import FileResponse
+import asyncio
 
 from backend.app.dutch.core.database import get_session
 from backend.app.dutch.schema.schemas import ExerciseContent, ExerciseContentReceive
 from backend.app.dutch.service.llm_service import LocalLLMService
 from backend.app.dutch.service.evaluator import EvaluatorService
+from backend.app.dutch.service.exercise_queue import exercise_queue_service
 from backend.base.asr import ASRService
 from backend.base.tts import TTSService
 from backend.config.config import settings
@@ -34,7 +37,12 @@ async def health_check():
 
 @router.get("/history")
 async def get_history(limit: int = 20, session: Session = Depends(get_session)):
-    query = select(ExerciseContent).order_by(ExerciseContent.created_at.desc()).limit(limit)
+    query = (
+        select(ExerciseContent)
+        .where(ExerciseContent.status.in_(["served", "completed"]))
+        .order_by(ExerciseContent.created_at.desc())
+        .limit(limit)
+    )
     results = session.exec(query).all()
     return results
 
@@ -56,17 +64,12 @@ async def generate_theme():
     return {"theme": "Dagelijkse routine"}
 
 @router.get("/exercise/{category}")
-async def get_exercise(category: str, theme: str = "Dagelijkse routine", session: Session = Depends(get_session)):
-    exercise = ExerciseContent(exercise_type=category, theme=theme)
-    if category == "listening":
-        exercise = await llm_service.generate_listening(exercise)
-    else:
-        exercise = await llm_service.generate_exercise(exercise)
-    
-    # SAVE to database so it exists in history/logs
-    session.add(exercise)
-    session.commit()
-    session.refresh(exercise)
+async def get_exercise(category: str, theme: str = "Dagelijkse routine"):
+    if category not in ["writing", "listening", "speaking"]:
+        raise HTTPException(status_code=400, detail="Unsupported exercise category")
+
+    exercise = await exercise_queue_service.get_next_exercise(category=category, theme=theme)
+    asyncio.create_task(exercise_queue_service.refill_if_needed())
     return exercise
 
 @router.post("/evaluate/writing/improve")
@@ -90,6 +93,7 @@ async def evaluate_writing(payload: ExerciseContentReceive, session: Session = D
     
     # 3. Handle status and dates
     exercise.status = "completed"
+    exercise.updated_at = datetime.now(timezone.utc)
     if payload.date:
         exercise.date_completed = payload.date
     else:
@@ -115,6 +119,7 @@ async def evaluate_writing(payload: ExerciseContentReceive, session: Session = D
 
 @router.post("/evaluate/speaking")
 async def evaluate_speaking(
+    exercise_id: Optional[int] = Form(None),
     theme: str = Form(...),
     date: str = Form(...),
     prompt: str = Form(...),
@@ -132,15 +137,20 @@ async def evaluate_speaking(
     # Transcribe
     transcription = asr_service.transcribe(audio_path)
     
-    # Build exercise object for evaluation
-    exercise = ExerciseContent(
-        exercise_type="speaking",
-        theme=theme,
-        question=prompt,
-        user_answer=transcription,
-        status="completed",
-        date_completed=date
-    )
+    if exercise_id:
+        exercise = session.get(ExerciseContent, exercise_id)
+        if not exercise:
+            exercise = ExerciseContent()
+    else:
+        exercise = ExerciseContent()
+
+    exercise.exercise_type = "speaking"
+    exercise.theme = theme
+    exercise.question = prompt
+    exercise.user_answer = transcription
+    exercise.status = "completed"
+    exercise.date_completed = date
+    exercise.updated_at = datetime.now(timezone.utc)
     
     result = await llm_service.evaluate(exercise)
     

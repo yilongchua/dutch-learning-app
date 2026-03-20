@@ -35,7 +35,7 @@ class ExerciseContentBase(SQLModel):
     
     options: List[str] = Field(default_factory=list, description="multiple choices options", sa_column=Column(PydanticJSONList))
     correct_answer: str = Field(default="", description="correct answer")
-    status: str = Field(default="pending", description="pending|completed|deleted")
+    status: str = Field(default="pending", description="pending|served|completed|deleted")
     date_completed: Optional[str] = Field(default=None, description="Format: YYYY-MM-DD")
 
 

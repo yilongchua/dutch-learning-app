@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { getExercise, improveWriting, generateTheme, getHistory } from '~/services/dutchApi';
+import { useDutchSession } from '~/context/dutchSession';
 import { Send, CheckCircle, AlertCircle, Wand2, RefreshCcw } from 'lucide-react';
 import type { Route } from './+types/dutch.writing';
 
@@ -21,7 +22,7 @@ interface Exercise {
   theme: string;
   prompt: string;
   keywords?: Keyword[];
-  question?: string; 
+  question?: string;
 }
 
 interface EvalResult {
@@ -32,22 +33,15 @@ interface EvalResult {
   explanation: string;
 }
 
-interface HistoryItem {
-  id: number;
-  prompt: string;
-  user_text: string;
-  score: number;
-  improved_text: string;
-  date: string;
-}
-
 export default function WritingPage() {
-  const [exercise, setExercise] = useState<Exercise | null>(null);
-  const [text, setText] = useState('');
-  const [result, setResult] = useState<EvalResult | null>(null);
+  const { state, hydrated, setCurrentTheme, setWritingState, resetWritingState } = useDutchSession();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<any[]>([]);
+
+  const exercise = state.writing.exercise as Exercise | null;
+  const text = state.writing.text;
+  const result = state.writing.result as EvalResult | null;
 
   const fetchHistoryFromBackend = async () => {
     try {
@@ -61,33 +55,25 @@ export default function WritingPage() {
   const fetchNewExercise = async (ignoreCache = false) => {
     setLoading(true);
     try {
-      let theme = localStorage.getItem('current_theme') || 'Dagelijkse routine';
-      const cacheKey = 'writing_exercise_cache';
-      const cached = localStorage.getItem(cacheKey);
-
-      if (!ignoreCache && cached) {
-        const parsed = JSON.parse(cached);
-        if (parsed.theme === theme) {
-          setExercise(parsed);
-          setLoading(false);
-          return;
-        }
-      }
-
+      let theme = state.currentTheme || 'Dagelijkse routine';
       if (ignoreCache) {
         const r = await generateTheme(theme);
         theme = r.data.theme;
-        localStorage.setItem('current_theme', theme);
       }
 
       const res = await getExercise('writing', theme);
       const data = res.data;
-      // Map backend 'question' to frontend 'prompt'
-      const mapped = { ...data, prompt: data.question || data.prompt };
-      setExercise(mapped);
-      localStorage.setItem(cacheKey, JSON.stringify(mapped));
-      setResult(null);
-      setText('');
+      const mapped = {
+        ...data,
+        prompt: data.question || data.prompt,
+      };
+
+      setCurrentTheme(mapped.theme || theme);
+      setWritingState({
+        exercise: mapped,
+        text: '',
+        result: null,
+      });
       setError(null);
       fetchHistoryFromBackend();
     } catch {
@@ -98,9 +84,13 @@ export default function WritingPage() {
   };
 
   useEffect(() => {
-    fetchNewExercise(false);
-    fetchHistoryFromBackend();
-  }, []);
+    if (!hydrated) return;
+    if (!exercise) {
+      fetchNewExercise(false);
+    } else {
+      fetchHistoryFromBackend();
+    }
+  }, [hydrated]);
 
   const handleEvaluate = async () => {
     if (!text.trim() || loading || !exercise) return;
@@ -111,16 +101,23 @@ export default function WritingPage() {
         text,
         theme: exercise.theme,
         prompt: exercise.prompt || exercise.question,
-        exercise_type: 'writing'
+        exercise_type: 'writing',
       });
-      const r = res.data;
-      setResult(r);
+      setWritingState({ result: res.data });
       fetchHistoryFromBackend();
-    } catch { /* error shown via UI */ }
-    finally { setLoading(false); }
+    } catch {
+      // Error remains shown in existing UI flow.
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (!exercise && loading) return (
+  const handleNewExercise = async () => {
+    resetWritingState();
+    await fetchNewExercise(true);
+  };
+
+  if ((!exercise && loading) || !hydrated) return (
     <div className="page-container" style={{ textAlign: 'center', paddingTop: '120px' }}>
       <RefreshCcw className="spinning" size={36} color="var(--primary)" />
       <h2 style={{ marginTop: '20px' }}>Generating Your Assignment...</h2>
@@ -133,7 +130,7 @@ export default function WritingPage() {
       <AlertCircle size={48} color="var(--error)" />
       <h2 style={{ marginTop: '20px' }}>Connection Issue</h2>
       <p style={{ color: 'var(--text-muted)', maxWidth: '480px', margin: '12px auto 24px', lineHeight: 1.6 }}>{error}</p>
-      <button className="btn btn-primary" onClick={() => fetchNewExercise(true)}>Try Again</button>
+      <button className="btn btn-primary" onClick={handleNewExercise}>Try Again</button>
     </div>
   );
 
@@ -145,13 +142,12 @@ export default function WritingPage() {
         <div>
           <h1>Writing Practice</h1>
         </div>
-        <button className="btn btn-secondary" onClick={() => fetchNewExercise(true)} disabled={loading}>
+        <button className="btn btn-secondary" onClick={handleNewExercise} disabled={loading}>
           <RefreshCcw size={16} /> New Exercise
         </button>
       </header>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
-        {/* Left: prompt + input */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <section className="glass card">
             <h3 style={{ color: 'var(--primary)', marginBottom: '12px' }}>Assignment</h3>
@@ -172,7 +168,7 @@ export default function WritingPage() {
             style={{ width: '100%', minHeight: '280px', padding: '20px', fontSize: '1rem', color: 'var(--text-light)', resize: 'vertical', outline: 'none', background: 'var(--card-bg)', fontFamily: 'inherit', lineHeight: 1.7 }}
             placeholder="Schrijf hier je tekst..."
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => setWritingState({ text: e.target.value })}
           />
 
           <div style={{ display: 'flex', gap: '12px' }}>
@@ -182,7 +178,6 @@ export default function WritingPage() {
           </div>
         </div>
 
-        {/* Right: results */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {result ? (
             <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>

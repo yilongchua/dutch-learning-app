@@ -34,7 +34,8 @@ class ExerciseGenerator:
         with Session(engine) as session:
             session.add(exercise)
             session.commit()
-            return True
+            session.refresh(exercise)
+            return exercise
     
     async def set_theme(self) -> str:
         themes = self._load_themes()
@@ -44,20 +45,31 @@ class ExerciseGenerator:
     
     async def new_exercise(self, exercise_type: str = 'writing') -> ExerciseContent:
         theme = await self.set_theme()
-        return ExerciseContent(theme=theme, exercise_type=exercise_type)
+        return ExerciseContent(theme=theme, exercise_type=exercise_type, status="pending")
 
     async def new_writing_exercise(self) -> ExerciseContent:
-        exercise = self.new_exercise()
+        exercise = await self.new_exercise("writing")
         exercise = await self.llm.generate_exercise(exercise)
-        exercise = await self.llm.generate_answer(exercise)
-        self._add_exercise(exercise)
-        return exercise
+        return self._add_exercise(exercise)
     
     async def new_listening_exercise(self) -> ExerciseContent:
-        exercise = self.new_exercise('listening')
+        exercise = await self.new_exercise('listening')
         exercise = await self.llm.generate_listening(exercise)
         filename = f"{settings.AUDIO_DIR}/tts_{uuid.uuid4().hex}.wav"
         audio_path = self.tts.generate_audio(exercise.audio_text, output_path=filename)
         exercise.audio_url = audio_path
-        self._add_exercise(exercise)
-        return exercise
+        return self._add_exercise(exercise)
+
+    async def new_speaking_exercise(self) -> ExerciseContent:
+        exercise = await self.new_exercise("speaking")
+        exercise = await self.llm.generate_exercise(exercise)
+        return self._add_exercise(exercise)
+
+    async def generate_by_type(self, exercise_type: str) -> ExerciseContent:
+        if exercise_type == "writing":
+            return await self.new_writing_exercise()
+        if exercise_type == "listening":
+            return await self.new_listening_exercise()
+        if exercise_type == "speaking":
+            return await self.new_speaking_exercise()
+        raise ValueError(f"Unsupported exercise type: {exercise_type}")

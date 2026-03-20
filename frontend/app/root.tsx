@@ -9,6 +9,7 @@ import {
 
 import type { Route } from './+types/root';
 import Navbar from '~/components/layout/Navbar';
+import { DutchSessionProvider } from '~/context/dutchSession';
 import './app.css';
 
 export const links: Route.LinksFunction = () => [
@@ -30,8 +31,10 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <Navbar />
-        {children}
+        <DutchSessionProvider>
+          <Navbar />
+          {children}
+        </DutchSessionProvider>
         <ScrollRestoration />
         <Scripts />
       </body>
