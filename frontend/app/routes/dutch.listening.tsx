@@ -16,6 +16,7 @@ interface Exercise {
   id?: number;
   theme: string;
   question: string;
+  audio_text?: string;
   text: string;
   options: string[];
   correct_answer: string;
@@ -50,6 +51,7 @@ export default function ListeningPage() {
       const res = await getExercise('listening', theme);
       const mapped = {
         ...res.data,
+        audio_text: res.data.audio_text || '',
         text: res.data.audio_text || res.data.text || '',
         english_translation: res.data.audio_translation || res.data.english_translation || '',
       };
@@ -224,6 +226,25 @@ export default function ListeningPage() {
           <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '14px', fontSize: '0.85rem' }}>
             {audioLoading ? 'Generating audio...' : isPlaying ? '▶ Playing' : '▶ Click to play audio'}
           </p>
+
+          <details style={{ marginTop: '16px' }}>
+            <summary style={{ cursor: 'pointer', color: 'var(--text-muted)', fontWeight: 600 }}>
+              Show Reference Transcript
+            </summary>
+            <div
+              style={{
+                marginTop: '10px',
+                padding: '14px',
+                borderRadius: '10px',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--glass-border)',
+              }}
+            >
+              <p style={{ margin: 0, lineHeight: 1.6 }}>
+                {exercise.audio_text || exercise.text || 'Transcript is not available yet.'}
+              </p>
+            </div>
+          </details>
         </section>
 
         <section className="glass card">

@@ -21,6 +21,7 @@ interface Exercise {
   id?: number;
   theme: string;
   prompt: string;
+  correct_answer?: string;
   keywords?: Keyword[];
   question?: string;
 }
@@ -161,6 +162,25 @@ export default function WritingPage() {
                 ))}
               </div>
             )}
+
+            <details style={{ marginTop: '16px' }}>
+              <summary style={{ cursor: 'pointer', color: 'var(--text-muted)', fontWeight: 600 }}>
+                Show Reference Answer
+              </summary>
+              <div
+                style={{
+                  marginTop: '10px',
+                  padding: '14px',
+                  borderRadius: '10px',
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid var(--glass-border)',
+                }}
+              >
+                <p style={{ margin: 0, lineHeight: 1.6 }}>
+                  {exercise.correct_answer || 'Reference answer is not available for this exercise yet.'}
+                </p>
+              </div>
+            </details>
           </section>
 
           <textarea
