@@ -68,9 +68,24 @@ fi
 
 echo "✅ Backend URL: $BACKEND_URL"
 
-# Update Frontend .env
+# Quick backend preflight check through public URL
+echo "🔎 Verifying backend health via tunnel..."
+if ! curl -sSf "$BACKEND_URL/api/dutch/health" >/dev/null 2>&1; then
+    echo "⚠️ Backend tunnel is up but /api/dutch/health did not respond successfully."
+    echo "   Ensure backend is running on localhost:$BACKEND_PORT on this machine."
+fi
+
+# Update Frontend .env with the keys actually used by frontend services
 echo "📝 Updating frontend .env with public backend URL..."
-echo "VITE_API_BASE_URL=$BACKEND_URL/api" > ../frontend/.env
+cat > ../frontend/.env <<EOF
+VITE_DUTCH_API_URL=$BACKEND_URL/api/dutch
+VITE_NEWS_API_URL=$BACKEND_URL/api/news
+VITE_GRAPHICS_API_URL=$BACKEND_URL/api/graphics_generation/
+VITE_SCHEDULER_API_URL=$BACKEND_URL/api/scheduler
+VITE_MEDIA_BASE_URL=$BACKEND_URL
+EOF
+echo "✅ Wrote ../frontend/.env"
+echo "   Restart frontend dev server after this change."
 
 # Start Frontend Tunnel
 echo "📡 Exposing Frontend as $FRONTEND_NAME on port $FRONTEND_PORT..."
