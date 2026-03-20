@@ -32,6 +32,12 @@ async def dutch_root():
 async def health_check():
     return {"status": "healthy", "app": "dutch"}
 
+@router.get("/history")
+async def get_history(limit: int = 20, session: Session = Depends(get_session)):
+    query = select(ExerciseContent).order_by(ExerciseContent.created_at.desc()).limit(limit)
+    results = session.exec(query).all()
+    return results
+
 import json
 import random
 
@@ -50,51 +56,62 @@ async def generate_theme():
     return {"theme": "Dagelijkse routine"}
 
 @router.get("/exercise/{category}")
-async def get_exercise(category: str, theme: str = "Dagelijkse routine"):
+async def get_exercise(category: str, theme: str = "Dagelijkse routine", session: Session = Depends(get_session)):
     exercise = ExerciseContent(exercise_type=category, theme=theme)
     if category == "listening":
         exercise = await llm_service.generate_listening(exercise)
     else:
         exercise = await llm_service.generate_exercise(exercise)
     
+    # SAVE to database so it exists in history/logs
+    session.add(exercise)
+    session.commit()
+    session.refresh(exercise)
     return exercise
 
 @router.post("/evaluate/writing/improve")
 @router.post("/evaluate/writing")
 async def evaluate_writing(payload: ExerciseContentReceive, session: Session = Depends(get_session)):
-    # Map frontend aliases
-    data_dict = payload.dict()
-    if payload.text and not payload.user_answer:
-        data_dict["user_answer"] = payload.text
-    if payload.prompt and not payload.question:
-        data_dict["question"] = payload.prompt
-    if payload.date and not payload.date_completed:
-        data_dict["date_completed"] = payload.date
-    
-    # Remove aliases before creating SQLModel
-    for k in ["text", "prompt", "date"]:
-        data_dict.pop(k, None)
-    
-    exercise = ExerciseContent(**data_dict)
+    # 1. Fetch existing exercise if ID is provided, or create new one
+    if payload.id:
+        exercise = session.get(ExerciseContent, payload.id)
+        if not exercise:
+            # Fallback to new if id provided but not found
+            exercise = ExerciseContent()
+    else:
+        exercise = ExerciseContent()
 
-    # 1. Rule-based evaluation
+    # 2. Map frontend data to model fields
+    # Use direct values or fallback to aliases (text/prompt/date)
+    exercise.user_answer = payload.user_answer or payload.text or ""
+    exercise.question = payload.question or payload.prompt or ""
+    exercise.theme = payload.theme or exercise.theme
+    exercise.exercise_type = payload.exercise_type or exercise.exercise_type or "writing"
+    
+    # 3. Handle status and dates
+    exercise.status = "completed"
+    if payload.date:
+        exercise.date_completed = payload.date
+    else:
+        exercise.date_completed = datetime.now().strftime("%Y-%m-%d")
+
+    # 4. Evaluation logic
+    # Rule-based
     rule_results = evaluator_service.evaluate_writing(exercise.user_answer)
     
-    # 2. LLM Evaluation
-    result = await llm_service.evaluate(exercise)
+    # LLM-based (updates score, breakdown, feedback, etc. in place)
+    exercise = await llm_service.evaluate(exercise)
     
-    # 3. Combine/Augment
+    # Optional enhancement: merge rule feedback
     if rule_results['rule_score'] < 100:
-        result.feedback = f"{rule_results['rule_feedback']}\n\n{result.feedback}"
+        exercise.feedback = f"{rule_results['rule_feedback']}\n\n{exercise.feedback}"
     
-    # Save/Update exercise
-    result.status = "completed"
-    result.date_completed = datetime.now().strftime("%Y-%m-%d")
-    session.add(result)
+    # 5. Save/Update in DB
+    session.add(exercise)
     session.commit()
-    session.refresh(result)
+    session.refresh(exercise)
     
-    return result
+    return exercise
 
 @router.post("/evaluate/speaking")
 async def evaluate_speaking(

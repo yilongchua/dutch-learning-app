@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { getExercise, improveWriting, generateTheme } from '~/services/dutchApi';
+import { getExercise, improveWriting, generateTheme, getHistory } from '~/services/dutchApi';
 import { Send, CheckCircle, AlertCircle, Wand2, RefreshCcw } from 'lucide-react';
 import type { Route } from './+types/dutch.writing';
 
@@ -11,10 +11,17 @@ export function meta({}: Route.MetaArgs) {
   ];
 }
 
+interface Keyword {
+  dutch: string;
+  english: string;
+}
+
 interface Exercise {
+  id?: number;
   theme: string;
   prompt: string;
-  word_bank?: string[];
+  keywords?: Keyword[];
+  question?: string; 
 }
 
 interface EvalResult {
@@ -40,7 +47,16 @@ export default function WritingPage() {
   const [result, setResult] = useState<EvalResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [history, setHistory] = useState<any[]>([]);
+
+  const fetchHistoryFromBackend = async () => {
+    try {
+      const res = await getHistory(10);
+      setHistory(res.data);
+    } catch (e) {
+      console.error('History fetch failed:', e);
+    }
+  };
 
   const fetchNewExercise = async (ignoreCache = false) => {
     setLoading(true);
@@ -62,18 +78,20 @@ export default function WritingPage() {
         const r = await generateTheme(theme);
         theme = r.data.theme;
         localStorage.setItem('current_theme', theme);
-        localStorage.removeItem('speaking_exercise_cache');
-        localStorage.removeItem('listening_exercise_cache');
       }
 
       const res = await getExercise('writing', theme);
-      setExercise(res.data);
-      localStorage.setItem(cacheKey, JSON.stringify(res.data));
+      const data = res.data;
+      // Map backend 'question' to frontend 'prompt'
+      const mapped = { ...data, prompt: data.question || data.prompt };
+      setExercise(mapped);
+      localStorage.setItem(cacheKey, JSON.stringify(mapped));
       setResult(null);
       setText('');
       setError(null);
+      fetchHistoryFromBackend();
     } catch {
-      setError('Unable to connect to the Dutch B1 server. Please ensure it is running on port 8000.');
+      setError('Unable to connect to the Dutch B1 server.');
     } finally {
       setLoading(false);
     }
@@ -81,30 +99,23 @@ export default function WritingPage() {
 
   useEffect(() => {
     fetchNewExercise(false);
-    try {
-      const h = JSON.parse(localStorage.getItem('writing_history') || '[]');
-      setHistory(h);
-    } catch {}
+    fetchHistoryFromBackend();
   }, []);
 
   const handleEvaluate = async () => {
     if (!text.trim() || loading || !exercise) return;
     setLoading(true);
     try {
-      const res = await improveWriting({ text, theme: exercise.theme });
+      const res = await improveWriting({
+        id: exercise.id,
+        text,
+        theme: exercise.theme,
+        prompt: exercise.prompt || exercise.question,
+        exercise_type: 'writing'
+      });
       const r = res.data;
       setResult(r);
-      const item: HistoryItem = {
-        id: Date.now(),
-        prompt: exercise.prompt,
-        user_text: text,
-        score: r.score,
-        improved_text: r.improved_text,
-        date: new Date().toLocaleString(),
-      };
-      const updated = [item, ...history];
-      setHistory(updated);
-      localStorage.setItem('writing_history', JSON.stringify(updated));
+      fetchHistoryFromBackend();
     } catch { /* error shown via UI */ }
     finally { setLoading(false); }
   };
@@ -145,11 +156,11 @@ export default function WritingPage() {
           <section className="glass card">
             <h3 style={{ color: 'var(--primary)', marginBottom: '12px' }}>Assignment</h3>
             <p style={{ lineHeight: 1.7, fontSize: '1.05rem' }}>{exercise.prompt}</p>
-            {exercise.word_bank && exercise.word_bank.length > 0 && (
+            {exercise.keywords && exercise.keywords.length > 0 && (
               <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-                {exercise.word_bank.map((w) => (
-                  <span key={w} style={{ padding: '3px 12px', background: 'rgba(255,159,28,0.1)', borderRadius: 999, fontSize: '0.8rem', color: 'var(--primary)', border: '1px solid rgba(255,159,28,0.2)' }}>
-                    {w}
+                {exercise.keywords.map((kw, i) => (
+                  <span key={i} title={kw.english} style={{ padding: '4px 12px', background: 'rgba(255,159,28,0.1)', borderRadius: 999, fontSize: '0.82rem', color: 'var(--primary)', border: '1px solid rgba(255,159,28,0.2)', cursor: 'help' }}>
+                    {kw.dutch} <small style={{ opacity: 0.6, marginLeft: '4px' }}>({kw.english})</small>
                   </span>
                 ))}
               </div>
@@ -214,14 +225,16 @@ export default function WritingPage() {
             <div>
               <h3 style={{ marginBottom: '14px', opacity: 0.8 }}>Recent History</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {history.slice(0, 5).map((item) => (
+                {history.slice(0, 10).map((item) => (
                   <div key={item.id} className="glass card" style={{ padding: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
                       <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{item.score}%</span>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.date}</span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                        {item.created_at ? new Date(item.created_at).toLocaleDateString() : (item.date || '')}
+                      </span>
                     </div>
                     <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                      {item.user_text}
+                      {item.user_answer || item.user_text}
                     </p>
                   </div>
                 ))}

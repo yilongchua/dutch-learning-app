@@ -1,4 +1,4 @@
-import asyncio, httpx
+import asyncio, httpx, json
 from pathlib import Path
 from typing import Union
 from typing import Type, TypeVar
@@ -50,6 +50,9 @@ class LLMBase:
         return template.render(**kwargs)
 
     async def generate_output(self, system_prompt: str, user_prompt: str, response_model: Type[T] = None) -> Union[T, str, None]:
+        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        print(user_prompt)
+        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         for attempt in range(self.max_retries):
             try:
                 # Prepare arguments
@@ -61,14 +64,37 @@ class LLMBase:
                         {"role": "user", "content": user_prompt}
                     ],
                 }
+                response:ChatCompletion = await self.client.chat.completions.create(**kwargs)
+                msg = response.choices[0].message
+
+                # 🔑 unify extraction
+                raw_text = None
+                if msg.content and msg.content.strip():
+                    raw_text = msg.content
+                elif hasattr(msg, "reasoning_content") and msg.reasoning_content:
+                    raw_text = msg.reasoning_content
+
+                if not raw_text:
+                    raise ValueError("Empty response from model")
+
+                # ✅ structured output
                 if response_model:
-                    # Use the parse helper for structured data
-                    response = await self.client.beta.chat.completions.parse(**kwargs, response_format=response_model)
-                    return response.choices[0].message.parsed
-                else:
-                    # Use standard create for plain text
-                    response:ChatCompletion  = await self.client.chat.completions.create(**kwargs)
-                    return response.choices[0].message.content
+                    parsed_dict = json.loads(raw_text)
+                    return response_model(**parsed_dict)
+
+                # ✅ plain text
+                return raw_text
+
+                # if response_model:
+                #     # Use the parse helper for structured data
+                #     response = await self.client.beta.chat.completions.parse(**kwargs, response_format=response_model)
+                #     print(f"{response.choices[0].message.reasoning_content =}")
+                #     return response_model(**response.choices[0].message.reasoning_content)
+                # else:
+                #     # Use standard create for plain text
+                #     response:ChatCompletion  = await self.client.chat.completions.create(**kwargs)
+                #     print(f"{response.choices[0].message.content =}")
+                #     return response.choices[0].message.content
 
             except Exception as e:
                 if attempt == self.max_retries - 1:

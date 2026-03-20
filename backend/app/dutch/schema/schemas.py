@@ -47,6 +47,7 @@ class ExerciseContent(ExerciseContentBase, table=True):
 
 class ExerciseContentReceive(ExerciseContentBase):
     """Handle incoming frontend data with aliases"""
+    id: Optional[int] = None
     text: Optional[str] = None
     prompt: Optional[str] = None
     date: Optional[str] = None

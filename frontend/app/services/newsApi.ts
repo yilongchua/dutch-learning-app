@@ -5,7 +5,7 @@ const BASE_URL = (import.meta.env.VITE_NEWS_API_URL as string) || 'http://localh
 
 export const MEDIA_BASE = (import.meta.env.VITE_MEDIA_BASE_URL as string) || 'http://localhost:8010';
 
-const api = axios.create({ baseURL: BASE_URL, timeout: 120000 });
+const api = axios.create({ baseURL: BASE_URL, timeout: 300000 });
 
 export const newsApi = {
   getNewsItems: async (): Promise<NewsItem[]> => {

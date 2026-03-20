@@ -9,7 +9,7 @@ class LocalLLMService(LLMBase):
     def __init__(self):
         import os
         prompt_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "prompts")
-        super().__init__(model="openai/gpt-oss-120b", template_dir=prompt_dir)
+        super().__init__(model=settings.MODEL, template_dir=prompt_dir)
     async def generate_questions(self, theme:str, **kwargs) -> QuestionsExtracted:
         """Generates unique sub-questions based on a theme and avoiding historical question."""
         result = QuestionsExtracted()
