@@ -50,9 +50,9 @@ class LLMBase:
         return template.render(**kwargs)
 
     async def generate_output(self, system_prompt: str, user_prompt: str, response_model: Type[T] = None) -> Union[T, str, None]:
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
-        print(user_prompt)
-        print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
+        # print(user_prompt)
+        # print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~")
         for attempt in range(self.max_retries):
             try:
                 # Prepare arguments
@@ -84,17 +84,6 @@ class LLMBase:
 
                 # ✅ plain text
                 return raw_text
-
-                # if response_model:
-                #     # Use the parse helper for structured data
-                #     response = await self.client.beta.chat.completions.parse(**kwargs, response_format=response_model)
-                #     print(f"{response.choices[0].message.reasoning_content =}")
-                #     return response_model(**response.choices[0].message.reasoning_content)
-                # else:
-                #     # Use standard create for plain text
-                #     response:ChatCompletion  = await self.client.chat.completions.create(**kwargs)
-                #     print(f"{response.choices[0].message.content =}")
-                #     return response.choices[0].message.content
 
             except Exception as e:
                 if attempt == self.max_retries - 1:

@@ -50,6 +50,7 @@ class ExerciseGenerator:
     async def new_writing_exercise(self) -> ExerciseContent:
         exercise = await self.new_exercise("writing")
         exercise = await self.llm.generate_exercise(exercise)
+        exercise = await self.llm.generate_answer(exercise)
         return self._add_exercise(exercise)
     
     async def new_listening_exercise(self) -> ExerciseContent:
@@ -63,6 +64,7 @@ class ExerciseGenerator:
     async def new_speaking_exercise(self) -> ExerciseContent:
         exercise = await self.new_exercise("speaking")
         exercise = await self.llm.generate_exercise(exercise)
+        exercise = await self.llm.generate_answer(exercise)
         return self._add_exercise(exercise)
 
     async def generate_by_type(self, exercise_type: str) -> ExerciseContent:

@@ -30,7 +30,8 @@ class LocalLLMService(LLMBase):
     
     async def generate_answer(self, exercise: ExerciseContent) -> ExerciseContent:
         """High-level method to generate a answer."""
-        user_prompt = self.render_prompt("generate_exercise", theme=exercise.theme)
+        kwargs = {"question": exercise.question, "keywords": exercise.keywords}
+        user_prompt = self.render_prompt("generate_answer", **kwargs)
         result = await self.generate_output(self.system_prompt, user_prompt)
         exercise.correct_answer = result
         return exercise

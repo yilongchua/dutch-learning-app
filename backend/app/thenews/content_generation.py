@@ -42,7 +42,7 @@ class ContentGenerator:
     async def run_pipeline(self):
         themes = self._load_themes()
         print(f"[*] Loaded {len(themes)} themes for end-to-end testing.")
-        for idx, theme_name in enumerate(themes[:1]):
+        for idx, theme_name in enumerate(themes):
             print(f"\n[!] Theme: {theme_name} ({idx+1}/{len(themes)})")
             success = await self.run_process(theme_name)
             if not success:
@@ -57,7 +57,7 @@ class ContentGenerator:
             print(f"    [*] Generating questions (Local LLM)...")
             new_questions: QuestionsExtracted = await self.llm.generate_questions(theme_name, past_questions=past_questions, news=latest_news)
             processed_count = 0
-            for q_idx, question in enumerate(new_questions.questions[:1]): 
+            for q_idx, question in enumerate(new_questions.questions[:2]): 
                 news_item = NewsItem(theme=theme_name, question=question)
                 print(f"\n    [>] Question {q_idx+1}/{len(new_questions.questions)}: {question}")                
                 try:
