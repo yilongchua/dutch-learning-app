@@ -33,7 +33,7 @@ class LocalLLMService(LLMBase):
         kwargs = {"question": exercise.question, "keywords": exercise.keywords}
         user_prompt = self.render_prompt("generate_answer", **kwargs)
         result = await self.generate_output(self.system_prompt, user_prompt)
-        exercise.correct_answer = '/n'.join([sentence for sentence in result.split('\n') if len(sentence) < 10])
+        exercise.correct_answer = '/n'.join([sentence for sentence in result.split('\n') if len(sentence) > 10])
         return exercise
         
     async def generate_listening(self, exercise: ExerciseContent) -> ExerciseContent:
