@@ -1,4 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
+import httpx
 import os
 from backend.config.config import settings
 from sqlmodel import Session, select
@@ -59,6 +61,30 @@ def delete_history_item(item_id: int, session: Session = Depends(get_session)):
 async def check_status(prompt_id: str):
     status = await service.check_status(prompt_id)
     return status
+
+@router.get("/view")
+async def proxy_comfy_view(
+    filename: str = Query(...),
+    type: str = Query("output"),
+    subfolder: str = Query(""),
+):
+    """
+    Proxy ComfyUI /view via backend so remote clients (e.g. phones over zrok)
+    do not need direct access to localhost:8188.
+    """
+    comfy_view_url = f"{settings.COMFYUI_API_URL}/view"
+    params = {"filename": filename, "type": type, "subfolder": subfolder}
+    try:
+        async with httpx.AsyncClient() as client:
+            upstream = await client.get(comfy_view_url, params=params, timeout=30.0)
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Failed to reach ComfyUI: {e}")
+
+    if upstream.status_code >= 400:
+        raise HTTPException(status_code=upstream.status_code, detail="ComfyUI view request failed")
+
+    media_type = upstream.headers.get("content-type", "application/octet-stream")
+    return Response(content=upstream.content, media_type=media_type)
 
 @router.get("/gallery")
 def get_gallery():

@@ -1,7 +1,11 @@
 import axios from 'axios';
+import { resolveApiBaseUrl, resolveMediaBaseUrl } from './apiConfig';
 
-const BASE_URL = import.meta.env.VITE_MEDIA_LIBRARY_URL || 'http://localhost:8010/api/media_library';
-export const MEDIA_BASE = import.meta.env.VITE_MEDIA_BASE_URL || 'http://localhost:8010';
+const BASE_URL = resolveApiBaseUrl(
+  import.meta.env.VITE_MEDIA_LIBRARY_URL as string | undefined,
+  '/api/media_library'
+);
+export const MEDIA_BASE = resolveMediaBaseUrl(import.meta.env.VITE_MEDIA_BASE_URL as string | undefined);
 
 const api = axios.create({ 
   baseURL: BASE_URL, 

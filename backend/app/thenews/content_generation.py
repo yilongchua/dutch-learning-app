@@ -42,7 +42,7 @@ class ContentGenerator:
     async def run_pipeline(self):
         themes = self._load_themes()
         print(f"[*] Loaded {len(themes)} themes for end-to-end testing.")
-        for idx, theme_name in enumerate(themes):
+        for idx, theme_name in enumerate(themes[5:6]):
             print(f"\n[!] Theme: {theme_name} ({idx+1}/{len(themes)})")
             success = await self.run_process(theme_name)
             if not success:
