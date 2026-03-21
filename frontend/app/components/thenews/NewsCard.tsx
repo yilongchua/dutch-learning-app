@@ -30,7 +30,7 @@ export interface NewsItem {
 }
 
 export default function NewsCard({ item }: { item: NewsItem }) {
-  const images = item.images_info.filter((img) => img.status === 'done' && img.img_path);
+  const images = item.images_info.filter((img) => ['done', 'passed'].includes(img.status) && img.img_path);
 
   return (
     <div
@@ -78,7 +78,7 @@ export default function NewsCard({ item }: { item: NewsItem }) {
             style={{ height: '100%', width: '100%' }}
           >
             {images.map((img) => {
-              const src = `${MEDIA_BASE}/data/${encodeURIComponent(img.img_path)}`;
+              const src = `${MEDIA_BASE}/api/news/image?img_path=${encodeURIComponent(img.img_path)}&skip_zrok_interstitial=true`;
               return (
                 <SwiperSlide key={img.image_id}>
                   <img

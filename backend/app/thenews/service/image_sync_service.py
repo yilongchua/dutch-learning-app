@@ -9,6 +9,8 @@ from backend.base.comfy_base import ComfyUIService
 from datetime import datetime
 from backend.config.config import settings
 
+SYNC_INTERVAL_SECONDS = 30
+
 
 def _extract_generated_image_path(outputs: Dict[str, Any]) -> Optional[str]:
     """Extract absolute file path from ComfyUI /history outputs."""
@@ -67,8 +69,9 @@ async def background_image_sync():
     while True:
         try:
             with Session(engine) as session:
-                # Find all NewsItems that are still 'processing' (meaning images might be pending)
-                statement = select(NewsItem).where(NewsItem.status == "processing")
+                # Include both pending and processing rows to recover from older records
+                # where item.status was not updated, but image rows are still processing.
+                statement = select(NewsItem).where(NewsItem.status.in_(["pending", "processing"]))
                 items: List[NewsItem] = session.exec(statement).all()
                 
                 if items:
@@ -76,6 +79,7 @@ async def background_image_sync():
                     
                     for item in items:
                         any_updated = False
+                        item_status_changed = False
                         all_images_done = True
                         
                         for idx, img_dict in enumerate(item.images_info):
@@ -92,7 +96,7 @@ async def background_image_sync():
                                     if generated_path:
                                         # Keep DB path exact and deterministic when possible.
                                         img.img_path = _normalize_to_desired_path(generated_path, img.img_path)
-                                        img.status = "passed"
+                                        img.status = "done"
                                         print(f"  [+] NewsItem {item.id} Image DONE: {img.img_path}")
                                         any_updated = True
                                     else:
@@ -101,11 +105,18 @@ async def background_image_sync():
                             elif not img.prompt_id: # due to certain reasons it failed
                                 img.status = 'failed'
                                 item.images_info[idx] = img.model_dump()
-                            
+                        
                         if all_images_done:
-                            item.status = "done"
-                            print(f"  [#] NewsItem {item.id} overall status set to DONE")
-                        if any_updated:
+                            if item.status != "done":
+                                item.status = "done"
+                                item_status_changed = True
+                                print(f"  [#] NewsItem {item.id} overall status set to DONE")
+                        else:
+                            if item.status != "processing":
+                                item.status = "processing"
+                                item_status_changed = True
+
+                        if any_updated or item_status_changed:
                             session.add(item)
                     
                     session.commit()
@@ -113,4 +124,4 @@ async def background_image_sync():
         except Exception as e:
             print(f"[Background Sync] Error in sync loop: {e}")
             
-        await asyncio.sleep(300)
+        await asyncio.sleep(SYNC_INTERVAL_SECONDS)

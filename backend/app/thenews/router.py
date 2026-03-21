@@ -1,14 +1,17 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 import os, sys
+from pathlib import Path
 # Add project root to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")))
 from sqlmodel import Session, select, func
 from typing import List
+from fastapi.responses import FileResponse
 
 from backend.app.thenews.core.database import get_session
 from backend.app.thenews.schema.news_item import NewsItem, NewsItemRead
 from backend.app.thenews.content_generation import ContentGenerator
 from fastapi import BackgroundTasks
+from backend.config.config import settings
 
 router = APIRouter(tags=["news"])
 @router.get("/")
@@ -35,5 +38,31 @@ async def trigger_generation(background_tasks: BackgroundTasks):
     background_tasks.add_task(generator.run_pipeline)
     return {"status": "started", "message": "Content generation pipeline is running in the background."}
 
-# ---------- END OF ROUTER ----------
+@router.get("/image")
+def get_news_image(img_path: str = Query(..., description="Absolute or /images path from images_info")):
+    """
+    Serve a generated TheNews image by path.
+    Accepts:
+    - absolute paths under COMFYUI_DIR / IMAGE_DIR
+    - /images/<relative> paths (resolved under IMAGE_DIR)
+    """
+    candidate: Path
+    if img_path.startswith("/images/"):
+        relative = img_path[len("/images/"):]
+        candidate = Path(settings.IMAGE_DIR) / relative
+    else:
+        candidate = Path(img_path)
 
+    try:
+        candidate_resolved = candidate.resolve(strict=True)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    comfy_root = Path(settings.COMFYUI_DIR).resolve()
+    image_root = Path(settings.IMAGE_DIR).resolve()
+    if not (str(candidate_resolved).startswith(str(comfy_root)) or str(candidate_resolved).startswith(str(image_root))):
+        raise HTTPException(status_code=403, detail="Image path is outside allowed directories")
+
+    return FileResponse(str(candidate_resolved))
+
+# ---------- END OF ROUTER ----------

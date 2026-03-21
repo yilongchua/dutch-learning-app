@@ -5,8 +5,8 @@ set -u
 # Configuration
 BACKEND_PORT=8010
 FRONTEND_PORT=5173
-BACKEND_NAME="dutchb1apiv2"
-FRONTEND_NAME="dutchb1appv2"
+BACKEND_NAME="dutchb1apiunified"
+FRONTEND_NAME="dutchb1appunified"
 
 # Resolve zrok binary
 resolve_zrok_bin() {
@@ -34,14 +34,75 @@ ZROK="$(resolve_zrok_bin)" || {
     exit 1
 }
 
+find_existing_reserved_share() {
+    local share_name="$1"
+    "$ZROK" overview 2>/dev/null | python3 - "$share_name" <<'PY'
+import json, sys
+name = sys.argv[1]
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    print("")
+    sys.exit(0)
+for env in data.get("environments", []):
+    for share in env.get("shares", []):
+        if share.get("reserved") and share.get("shareToken") == name:
+            print(name)
+            sys.exit(0)
+print("")
+PY
+}
+
+ensure_reserved_share() {
+    local share_name="$1"
+    local target="$2"
+
+    local existing
+    existing="$(find_existing_reserved_share "$share_name")"
+    if [ -n "$existing" ]; then
+        echo "✅ Reusing existing reserved share: $share_name"
+        return 0
+    fi
+
+    echo "🛠 Reserving new share: $share_name -> $target"
+    local reserve_out
+    if ! reserve_out="$("$ZROK" reserve public "$target" --unique-name "$share_name" 2>&1)"; then
+        echo "❌ Failed to reserve '$share_name'."
+        echo "$reserve_out"
+        echo "Tip: the unique name may already be taken globally. Try a different BACKEND_NAME/FRONTEND_NAME."
+        return 1
+    fi
+
+    local verify=""
+    for _ in {1..8}; do
+        verify="$(find_existing_reserved_share "$share_name")"
+        if [ -n "$verify" ]; then
+            break
+        fi
+        sleep 1
+    done
+
+    if [ -z "$verify" ]; then
+        if echo "$reserve_out" | grep -q "your reserved share token is '$share_name'"; then
+            echo "⚠️ Reservation succeeded but was not yet visible in overview; continuing with '$share_name'."
+        else
+            echo "❌ Reserved share '$share_name' was not found after reservation."
+            echo "$reserve_out"
+            return 1
+        fi
+    fi
+
+    echo "✅ Reserved share created: $share_name"
+}
+
 echo "✅ Using zrok binary: $ZROK"
 echo "🚀 Starting zrok tunnels with custom names..."
 
 # Start Backend Tunnel (Running in background)
 echo "📡 Exposing Backend as $BACKEND_NAME on port $BACKEND_PORT..."
 
-# 1. Try to reserve the name (ignore error if already reserved)
-"$ZROK" reserve public http://localhost:$BACKEND_PORT --unique-name "$BACKEND_NAME" > /dev/null 2>&1
+# 1. Ensure reserved share exists
+ensure_reserved_share "$BACKEND_NAME" "http://localhost:$BACKEND_PORT" || exit 1
 
 # 2. Start the shared reserved tunnel
 "$ZROK" share reserved "$BACKEND_NAME" --headless > backend_zrok.log 2>&1 &
@@ -91,8 +152,8 @@ echo "   Restart frontend dev server after this change."
 # Start Frontend Tunnel
 echo "📡 Exposing Frontend as $FRONTEND_NAME on port $FRONTEND_PORT..."
 
-# 1. Try to reserve the name (ignore error if already reserved)
-"$ZROK" reserve public http://localhost:$FRONTEND_PORT --unique-name "$FRONTEND_NAME" > /dev/null 2>&1
+# 1. Ensure reserved share exists
+ensure_reserved_share "$FRONTEND_NAME" "http://localhost:$FRONTEND_PORT" || exit 1
 
 # 2. Start the shared reserved tunnel
 "$ZROK" share reserved "$FRONTEND_NAME"

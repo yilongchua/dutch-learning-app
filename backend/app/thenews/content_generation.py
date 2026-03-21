@@ -79,6 +79,8 @@ class ContentGenerator:
                     for image in news_item.images_info:
                         image.prompt_id = await self.image_gen.generate_image(image_prompt=image.image_prompt, file_prefix=image.image_id)
                         image.status = "processing"
+                    # Mark item as actively processing so background sync picks it up.
+                    news_item.status = "processing"
                     print(f"        [*] Prepare model for DB...")
                     session.add(news_item)
                     session.commit()
