@@ -5,8 +5,8 @@ set -u
 # Configuration
 BACKEND_PORT=8010
 FRONTEND_PORT=5173
-BACKEND_NAME="shibbsandbunnsapi"
-FRONTEND_NAME="shibbsandbunnsapp"
+BACKEND_NAME="capybaraanddustybunnsapi"
+FRONTEND_NAME="capybaraanddustybunnsapp"
 LOOPBACK_HOST="127.0.0.1"
 
 # Resolve zrok binary

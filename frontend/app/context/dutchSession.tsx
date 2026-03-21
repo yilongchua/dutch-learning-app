@@ -61,6 +61,29 @@ export function DutchSessionProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
+    fetch('/db_version.json')
+      .then(res => {
+        if (!res.ok) throw new Error('No db_version.json found');
+        return res.json();
+      })
+      .then(data => {
+        const currentVersion = window.localStorage.getItem('db_version');
+        if (currentVersion && currentVersion !== String(data.last_reset)) {
+          window.localStorage.removeItem(STORAGE_KEY);
+          window.localStorage.setItem('db_version', String(data.last_reset));
+          window.location.reload();
+        } else if (!currentVersion && data.last_reset) {
+          window.localStorage.setItem('db_version', String(data.last_reset));
+        }
+      })
+      .catch(err => {
+        // Ignore if file doesn't exist
+      });
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
     try {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
