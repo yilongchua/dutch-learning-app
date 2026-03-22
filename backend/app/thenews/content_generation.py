@@ -22,6 +22,8 @@ class ContentGenerator:
         self.theme_file = theme_file
         print(self.theme_file)
         init_db()
+        self.num_questions : int= 5
+        self.article_length : int= 4
         self.web_search = WebSearchService()
         self.llm = LocalLLMService()
         self.image_gen = ComfyUIService()
@@ -55,9 +57,10 @@ class ContentGenerator:
             past_questions = session.exec(select(NewsItem.question).where(NewsItem.theme == theme_name)).all()
             latest_news = await self.web_search.search_updates(input_text=theme_name)
             print(f"    [*] Generating questions (Local LLM)...")
-            new_questions: QuestionsExtracted = await self.llm.generate_questions(theme_name, past_questions=past_questions, news=latest_news)
+            new_questions: QuestionsExtracted = await self.llm.generate_questions(theme_name, past_questions=past_questions, 
+                                                                                  news=latest_news, num_questions = self.num_questions)
             processed_count = 0
-            for q_idx, question in enumerate(new_questions.questions[:5]): 
+            for q_idx, question in enumerate(new_questions.questions): 
                 news_item = NewsItem(theme=theme_name, question=question)
                 print(f"\n    [>] Question {q_idx+1}/{len(new_questions.questions)}: {question}")                
                 try:
@@ -67,7 +70,7 @@ class ContentGenerator:
                     news_item.search_items = search_result.search_items
                     # Generate Article 
                     print(f"        [*] Generating article via Local LLM ...")
-                    news_item = await self.llm.generate_article(news_item)
+                    news_item = await self.llm.generate_article(news_item, article_length=self.article_length)
                     # Generate Caption 
                     print(f"        [*] Generating Caption via Local LLM ...")
                     news_item = await self.llm.translate_dutch_b1(news_item)
