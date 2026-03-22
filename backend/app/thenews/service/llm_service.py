@@ -18,11 +18,11 @@ class LocalLLMService(LLMBase):
         result = await self.generate_output(system_prompt=system_prompt, user_prompt=user_prompt, response_model=QuestionsExtracted)
         return result
     
-    async def generate_article(self, news_item: NewsItem) -> NewsItem:
+    async def generate_article(self, news_item: NewsItem, **kwargs) -> NewsItem:
         """Generates a structured article dict based on search context."""
         result = ArticleExtracted()
         system_prompt = "You are a helpful news assistant. Write objective news articles based on the given sources. Output strictly structured text matching the template."
-        user_prompt = self.render_prompt("generate_article", news_item=news_item)
+        user_prompt = self.render_prompt("generate_article", news_item=news_item,  **kwargs)
         result = await self.generate_output(system_prompt, user_prompt, response_model=ArticleExtracted)
         news_item.article = result.article
         return news_item
