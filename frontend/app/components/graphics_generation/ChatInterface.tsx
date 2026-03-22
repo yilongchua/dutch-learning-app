@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, Plus, Image as ImageIcon, Video, Trash2, Loader2, Wand2 } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Send, Image as ImageIcon, Video, Trash2, Loader2, Wand2 } from 'lucide-react';
 import { graphicsGenerationApi, type GraphicsItem, COMFY_URL } from '~/services/graphicsGenerationApi';
 
 function MediaDisplay({ item, onDelete }: { item: GraphicsItem, onDelete: (id: number) => void }) {
@@ -108,10 +108,33 @@ export default function ChatInterface() {
   const [isLoading, setIsLoading] = useState(true);
   const [isEnhanceEnabled, setIsEnhanceEnabled] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isMobilePortrait, setIsMobilePortrait] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadHistory();
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const mediaQuery = window.matchMedia('(max-width: 768px) and (orientation: portrait)');
+    const updateViewMode = () => setIsMobilePortrait(mediaQuery.matches);
+    updateViewMode();
+
+    if (mediaQuery.addEventListener) {
+      mediaQuery.addEventListener('change', updateViewMode);
+    } else {
+      mediaQuery.addListener(updateViewMode);
+    }
+
+    return () => {
+      if (mediaQuery.removeEventListener) {
+        mediaQuery.removeEventListener('change', updateViewMode);
+      } else {
+        mediaQuery.removeListener(updateViewMode);
+      }
+    };
   }, []);
 
   const loadHistory = async () => {
@@ -126,14 +149,14 @@ export default function ChatInterface() {
   };
 
   const scrollToBottom = () => {
-    if (scrollRef.current) {
+    if (scrollRef.current && !isMobilePortrait) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [history]);
+  }, [history, isMobilePortrait]);
 
   const handleSend = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -190,13 +213,18 @@ export default function ChatInterface() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: isMobilePortrait ? 'auto' : '100%' }}>
       {/* Scrollable Feed */}
       <div 
         ref={scrollRef}
         style={{ 
-          flex: 1, overflowY: 'auto', padding: '24px', 
-          display: 'flex', flexDirection: 'column', gap: '24px' 
+          flex: isMobilePortrait ? '0 1 auto' : 1,
+          overflowY: isMobilePortrait ? 'visible' : 'auto',
+          padding: isMobilePortrait ? '12px' : '24px',
+          paddingBottom: isMobilePortrait ? '128px' : '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: isMobilePortrait ? '16px' : '24px',
         }}
       >
         {isLoading ? (
@@ -214,33 +242,115 @@ export default function ChatInterface() {
       </div>
 
       {/* Input Area */}
-      <div style={{ background: 'rgba(1,22,39,0.5)', borderTop: '1px solid var(--glass-border)', padding: '16px 24px' }}>
+      <div
+        style={{
+          background: 'rgba(1,22,39,0.78)',
+          borderTop: '1px solid var(--glass-border)',
+          padding: isMobilePortrait ? '12px 12px calc(12px + env(safe-area-inset-bottom, 0px))' : '16px 24px',
+          position: isMobilePortrait ? 'sticky' : 'static',
+          bottom: isMobilePortrait ? 0 : undefined,
+          backdropFilter: isMobilePortrait ? 'blur(12px)' : 'none',
+          zIndex: isMobilePortrait ? 20 : 'auto',
+        }}
+      >
         <form 
           onSubmit={handleSend}
           style={{ 
-            display: 'flex', gap: '12px', alignItems: 'flex-end', 
-            maxWidth: '800px', margin: '0 auto' 
+            display: 'flex',
+            gap: '12px',
+            alignItems: isMobilePortrait ? 'stretch' : 'flex-end',
+            flexDirection: isMobilePortrait ? 'column' : 'row',
+            maxWidth: '800px',
+            margin: '0 auto',
+            width: '100%',
           }}
         >
-          {/* Enhance Button */}
-          <button
-            type="button"
-            onClick={() => setIsEnhanceEnabled(prev => !prev)}
-            style={{
-              background: isEnhanceEnabled ? 'linear-gradient(135deg, #818cf8, #c084fc)' : 'rgba(0,0,0,0.3)',
-              border: isEnhanceEnabled ? '2px solid #a78bfa' : '2px solid transparent',
-              borderRadius: '50%', width: '44px', height: '44px',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: isEnhanceEnabled ? 'white' : 'var(--text-muted)',
-              cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0,
-              boxShadow: isEnhanceEnabled ? '0 0 15px rgba(167, 139, 250, 0.5)' : 'none'
-            }}
-            title={isEnhanceEnabled ? "Prompt enhancement enabled" : "Enable AI prompt enhancement"}
-            onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; }}
-            onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
-          >
-            <Wand2 size={20} />
-          </button>
+          {isMobilePortrait && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', width: '100%' }}>
+              {/* Enhance Button */}
+              <button
+                type="button"
+                onClick={() => setIsEnhanceEnabled(prev => !prev)}
+                style={{
+                  background: isEnhanceEnabled ? 'linear-gradient(135deg, #818cf8, #c084fc)' : 'rgba(0,0,0,0.3)',
+                  border: isEnhanceEnabled ? '2px solid #a78bfa' : '2px solid transparent',
+                  borderRadius: '50%',
+                  width: '48px',
+                  height: '48px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: isEnhanceEnabled ? 'white' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  flexShrink: 0,
+                  boxShadow: isEnhanceEnabled ? '0 0 15px rgba(167, 139, 250, 0.5)' : 'none',
+                }}
+                title={isEnhanceEnabled ? "Prompt enhancement enabled" : "Enable AI prompt enhancement"}
+              >
+                <Wand2 size={20} />
+              </button>
+
+              {/* Media Type Toggle */}
+              <div
+                style={{
+                  display: 'flex',
+                  background: 'rgba(0,0,0,0.3)',
+                  borderRadius: '10px',
+                  padding: '4px',
+                  border: '1px solid var(--glass-border)',
+                  flex: 1,
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={() => setMediaType('image')}
+                  style={{
+                    flex: 1,
+                    minHeight: '40px',
+                    padding: '8px 12px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    background: mediaType === 'image' ? '#a78bfa' : 'transparent',
+                    color: mediaType === 'image' ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <ImageIcon size={14} /> Image
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMediaType('video')}
+                  style={{
+                    flex: 1,
+                    minHeight: '40px',
+                    padding: '8px 12px',
+                    border: 'none',
+                    borderRadius: '6px',
+                    background: mediaType === 'video' ? '#a78bfa' : 'transparent',
+                    color: mediaType === 'video' ? '#fff' : 'var(--text-muted)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    fontSize: '0.85rem',
+                    fontWeight: 600,
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  <Video size={14} /> Video
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Text Input */}
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -248,12 +358,19 @@ export default function ChatInterface() {
               value={input}
               onChange={e => setInput(e.target.value)}
               placeholder="Describe what you want to generate in 1-3 sentences..."
-              rows={2}
+              rows={isMobilePortrait ? 3 : 2}
               style={{
-                width: '100%', padding: '12px 16px', borderRadius: '14px',
-                background: 'rgba(0,0,0,0.2)', border: '1px solid var(--glass-border)',
-                color: 'var(--text-light)', fontSize: '0.95rem', fontFamily: 'inherit',
-                outline: 'none', resize: 'none', lineHeight: '1.4'
+                width: '100%',
+                padding: '12px 16px',
+                borderRadius: '14px',
+                background: 'rgba(0,0,0,0.2)',
+                border: '1px solid var(--glass-border)',
+                color: 'var(--text-light)',
+                fontSize: isMobilePortrait ? '1rem' : '0.95rem',
+                fontFamily: 'inherit',
+                outline: 'none',
+                resize: 'none',
+                lineHeight: '1.4',
               }}
               onKeyDown={e => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -264,55 +381,140 @@ export default function ChatInterface() {
             />
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
-            {/* Media Type Slider/Toggle */}
-            <div style={{ 
-              display: 'flex', background: 'rgba(0,0,0,0.3)', borderRadius: '10px', 
-              padding: '4px', border: '1px solid var(--glass-border)' 
-            }}>
-              <button
-                type="button"
-                onClick={() => setMediaType('image')}
-                style={{
-                  flex: 1, padding: '6px 12px', border: 'none', borderRadius: '6px',
-                  background: mediaType === 'image' ? '#a78bfa' : 'transparent',
-                  color: mediaType === 'image' ? '#fff' : 'var(--text-muted)',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
-                  fontSize: '0.8rem', fontWeight: 600, transition: 'all 0.2s'
-                }}
-              >
-                <ImageIcon size={14} /> Image
-              </button>
-              <button
-                type="button"
-                onClick={() => setMediaType('video')}
-                style={{
-                  flex: 1, padding: '6px 12px', border: 'none', borderRadius: '6px',
-                  background: mediaType === 'video' ? '#a78bfa' : 'transparent',
-                  color: mediaType === 'video' ? '#fff' : 'var(--text-muted)',
-                  cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
-                  fontSize: '0.8rem', fontWeight: 600, transition: 'all 0.2s'
-                }}
-              >
-                <Video size={14} /> Video
-              </button>
-            </div>
-
+          {isMobilePortrait ? (
             <button
               type="submit"
               disabled={!input.trim() || isGenerating}
               style={{
-                background: 'var(--primary)', color: '#fff', border: 'none',
-                borderRadius: '10px', padding: '10px 16px', fontWeight: 600,
-                cursor: (!input.trim() || isGenerating) ? 'not-allowed' : 'pointer', fontSize: '0.9rem',
-                opacity: (!input.trim() || isGenerating) ? 0.6 : 1, display: 'flex', alignItems: 'center',
-                justifyContent: 'center', gap: '6px', transition: 'background 0.2s'
+                width: '100%',
+                minHeight: '48px',
+                background: 'var(--primary)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '12px',
+                padding: '12px 16px',
+                fontWeight: 700,
+                cursor: (!input.trim() || isGenerating) ? 'not-allowed' : 'pointer',
+                fontSize: '0.95rem',
+                opacity: (!input.trim() || isGenerating) ? 0.6 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
               }}
             >
-              {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />} 
+              {isGenerating ? <Loader2 size={18} className="animate-spin" /> : <Send size={16} />}
               {isGenerating ? 'Sending...' : 'Send'}
             </button>
-          </div>
+          ) : (
+            <>
+              {/* Enhance Button */}
+              <button
+                type="button"
+                onClick={() => setIsEnhanceEnabled(prev => !prev)}
+                style={{
+                  background: isEnhanceEnabled ? 'linear-gradient(135deg, #818cf8, #c084fc)' : 'rgba(0,0,0,0.3)',
+                  border: isEnhanceEnabled ? '2px solid #a78bfa' : '2px solid transparent',
+                  borderRadius: '50%',
+                  width: '44px',
+                  height: '44px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: isEnhanceEnabled ? 'white' : 'var(--text-muted)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  flexShrink: 0,
+                  boxShadow: isEnhanceEnabled ? '0 0 15px rgba(167, 139, 250, 0.5)' : 'none',
+                }}
+                title={isEnhanceEnabled ? "Prompt enhancement enabled" : "Enable AI prompt enhancement"}
+                onMouseEnter={e => { e.currentTarget.style.transform = 'scale(1.05)'; }}
+                onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}
+              >
+                <Wand2 size={20} />
+              </button>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', flexShrink: 0 }}>
+                {/* Media Type Slider/Toggle */}
+                <div
+                  style={{
+                    display: 'flex',
+                    background: 'rgba(0,0,0,0.3)',
+                    borderRadius: '10px',
+                    padding: '4px',
+                    border: '1px solid var(--glass-border)',
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setMediaType('image')}
+                    style={{
+                      flex: 1,
+                      padding: '6px 12px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      background: mediaType === 'image' ? '#a78bfa' : 'transparent',
+                      color: mediaType === 'image' ? '#fff' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <ImageIcon size={14} /> Image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setMediaType('video')}
+                    style={{
+                      flex: 1,
+                      padding: '6px 12px',
+                      border: 'none',
+                      borderRadius: '6px',
+                      background: mediaType === 'video' ? '#a78bfa' : 'transparent',
+                      color: mediaType === 'video' ? '#fff' : 'var(--text-muted)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      transition: 'all 0.2s',
+                    }}
+                  >
+                    <Video size={14} /> Video
+                  </button>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={!input.trim() || isGenerating}
+                  style={{
+                    background: 'var(--primary)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    padding: '10px 16px',
+                    fontWeight: 600,
+                    cursor: (!input.trim() || isGenerating) ? 'not-allowed' : 'pointer',
+                    fontSize: '0.9rem',
+                    opacity: (!input.trim() || isGenerating) ? 0.6 : 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    transition: 'background 0.2s',
+                  }}
+                >
+                  {isGenerating ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                  {isGenerating ? 'Sending...' : 'Send'}
+                </button>
+              </div>
+            </>
+          )}
         </form>
       </div>
     </div>

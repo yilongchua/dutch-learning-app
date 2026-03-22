@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { newsApi } from '~/services/newsApi';
 import NewsCard, { type NewsItem } from './NewsCard';
 
