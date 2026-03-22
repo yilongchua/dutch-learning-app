@@ -105,6 +105,13 @@ ensure_reserved_share() {
 }
 
 echo "✅ Using zrok binary: $ZROK"
+
+# Clean up any existing reserved shares to start fresh
+echo "🧹 Cleaning up existing zrok shares..."
+"$ZROK" release "$BACKEND_NAME" >/dev/null 2>&1 || true
+"$ZROK" release "$FRONTEND_NAME" >/dev/null 2>&1 || true
+sleep 1
+
 echo "🚀 Starting zrok tunnels with custom names..."
 
 # Start Backend Tunnel (Running in background)
