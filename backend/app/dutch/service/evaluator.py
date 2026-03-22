@@ -1,23 +1,42 @@
 import language_tool_python
 import spacy
 from typing import List, Dict
-import os
-from backend.config.config import settings
+import shutil
+import subprocess
+import warnings
 
 class EvaluatorService:
     def __init__(self):
         try:
             # nl_core_news_sm might need to be downloaded
-            self.nlp = spacy.load('nl_core_news_sm')
+            with warnings.catch_warnings():
+                # Suppress noisy spaCy model-version compatibility warning (W095).
+                warnings.filterwarnings("ignore", message=r".*\[W095\].*", category=UserWarning)
+                self.nlp = spacy.load('nl_core_news_sm')
         except Exception as e:
             print(f"Warning: Spacy model 'nl_core_news_sm' not found. Rule-based flow check will be limited. {e}")
             self.nlp = None
             
-        try:
-            self.tool = language_tool_python.LanguageTool('nl')
-        except Exception as e:
-            print(f"Warning: LanguageTool (nl) could not be initialized. Grammar checks will be limited. {e}")
+        java_path = shutil.which("java")
+        if not java_path:
+            print("Info: LanguageTool (nl) disabled because Java is not installed. Grammar checks will be limited.")
             self.tool = None
+        else:
+            try:
+                java_ok = subprocess.run(
+                    [java_path, "-version"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    check=False,
+                ).returncode == 0
+                if not java_ok:
+                    print("Info: LanguageTool (nl) disabled because Java runtime is unavailable. Grammar checks will be limited.")
+                    self.tool = None
+                else:
+                    self.tool = language_tool_python.LanguageTool('nl')
+            except Exception:
+                print("Info: LanguageTool (nl) disabled. Grammar checks will be limited.")
+                self.tool = None
 
     def evaluate_writing(self, text: str) -> Dict:
         feedback = []

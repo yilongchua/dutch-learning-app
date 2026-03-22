@@ -1,4 +1,3 @@
-import React from 'react';
 import { Swiper, SwiperSlide } from 'swiper/react';
 import { Navigation, Pagination } from 'swiper/modules';
 import 'swiper/css';
@@ -30,7 +29,11 @@ export interface NewsItem {
 }
 
 export default function NewsCard({ item }: { item: NewsItem }) {
-  const images = item.images_info.filter((img) => ['done', 'passed'].includes(img.status) && img.img_path);
+  const images = item.images_info.filter((img) => {
+    if (!img.img_path) return false;
+    if (['done', 'passed'].includes(img.status)) return true;
+    return ['processing', 'pending', ''].includes(img.status);
+  });
 
   return (
     <div
