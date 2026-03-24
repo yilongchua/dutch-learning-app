@@ -1,7 +1,8 @@
 import uuid
 from backend.base.llm_base import LLMBase
 from typing import Optional, List, Dict
-from backend.app.dutch.schema.response_format import NewThemeExtracted, NewExerciseExtracted, NewListeningExtracted, EvaluatedExtracted
+from backend.app.dutch.schema.response_format import (NewThemeExtracted, NewExerciseExtracted, TranslatedEnglishExtracted,
+                                                        NewListeningExtracted, EvaluatedExtracted, AnswerExtracted)
 from backend.app.dutch.schema.schemas import ExerciseContent
 from datetime import datetime
 from backend.config.config import settings
@@ -28,12 +29,21 @@ class LocalLLMService(LLMBase):
         exercise.keywords = result.keywords
         return exercise
     
+    async def translate_answer(self, exercise: ExerciseContent) -> ExerciseContent:
+        """High-level method to generate a answer."""
+        kwargs = {"text_to_translate": exercise.correct_answer}
+        user_prompt = self.render_prompt("translate_answer", **kwargs)
+        result = await self.generate_output(self.system_prompt, user_prompt, response_model=TranslatedEnglishExtracted)
+        exercise.correct_answer_translation = result.translated_english
+        return exercise
+
     async def generate_answer(self, exercise: ExerciseContent) -> ExerciseContent:
         """High-level method to generate a answer."""
         kwargs = {"question": exercise.question, "keywords": exercise.keywords}
         user_prompt = self.render_prompt("generate_answer", **kwargs)
-        result = await self.generate_output(self.system_prompt, user_prompt)
-        exercise.correct_answer = '/n'.join([sentence for sentence in result.split('\n') if len(sentence) > 10])
+        result = await self.generate_output(self.system_prompt, user_prompt, response_model=AnswerExtracted)
+        exercise.correct_answer = result.structured_dutch
+        exercise = await self.translate_answer(exercise)
         return exercise
         
     async def generate_listening(self, exercise: ExerciseContent) -> ExerciseContent:
@@ -51,7 +61,6 @@ class LocalLLMService(LLMBase):
         kwargs = {"question": exercise.question, "answer": exercise.user_answer}
         user_prompt = self.render_prompt("evaluate_answer", **kwargs)
         result = await self.generate_output(self.system_prompt, user_prompt, response_model=EvaluatedExtracted)
-        print(result)
         exercise.score = result.score
         exercise.score_breakdown = result.score_breakdown
         exercise.improved_text = result.improved_text

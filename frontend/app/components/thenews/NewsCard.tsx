@@ -3,6 +3,7 @@ import { Navigation, Pagination } from 'swiper/modules';
 import 'swiper/css';
 import 'swiper/css/navigation';
 import 'swiper/css/pagination';
+import { FormattedText } from '~/components/FormattedText';
 import { MEDIA_BASE } from '~/services/newsApi';
 
 export interface ImageInfo {
@@ -109,31 +110,30 @@ export default function NewsCard({ item }: { item: NewsItem }) {
             : typeof item.output_captions === 'string'
               ? (item.output_captions as string).split('\n').filter((s: string) => s.trim().length > 0)
               : [];
-          return captionsArray.map((caption: string, idx: number) => {
-            const isGrammar = caption.startsWith('[Grammar Breakdown]:');
-            const text = isGrammar ? caption.replace('[Grammar Breakdown]:', '').trim() : caption;
-            if (isGrammar) {
-              return (
-                <div key={idx} style={{
-                  padding: '10px 14px', borderRadius: 12,
-                  background: 'rgba(96,165,250,0.08)', borderLeft: '3px solid #60a5fa',
-                  color: '#93c5fd', fontSize: '0.82rem', fontStyle: 'italic',
-                }}>
-                  <span style={{ fontWeight: 700, marginRight: 6 }}>💡 Regel:</span>{text}
-                </div>
-              );
-            }
-            return (
-              <p key={idx} style={{
-                fontSize: idx % 2 === 0 ? '0.95rem' : '0.82rem',
-                fontWeight: idx % 2 === 0 ? 600 : 400,
-                color: idx % 2 === 0 ? 'var(--text-light)' : 'var(--text-muted)',
-                lineHeight: 1.6,
-              }}>
-                {text}
-              </p>
-            );
-          });
+          const groups: string[][] = [];
+          for (let i = 0; i < captionsArray.length; i += 3) {
+            groups.push(captionsArray.slice(i, i + 3));
+          }
+          let globalIdx = 0;
+          return groups.map((group, gIdx) => (
+            <div key={gIdx} style={{ marginBottom: gIdx < groups.length - 1 ? 14 : 0 }}>
+              {group.map((caption: string) => {
+                const idx = globalIdx++;
+                const isFirst = idx === 0;
+                return (
+                  <p key={idx} style={{
+                    fontSize: '0.92rem',
+                    fontWeight: isFirst ? 700 : 400,
+                    color: isFirst ? 'var(--text-light)' : 'var(--text-muted)',
+                    lineHeight: 1.6,
+                    marginBottom: 4,
+                  }}>
+                    <FormattedText text={caption} />
+                  </p>
+                );
+              })}
+            </div>
+          ));
         })()}
 
         {item.breakdown_sentences && item.breakdown_sentences.length > 0 && (

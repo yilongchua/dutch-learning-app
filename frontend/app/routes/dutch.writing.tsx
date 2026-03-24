@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { getExercise, improveWriting, generateTheme, getHistory } from '~/services/dutchApi';
 import { useDutchSession } from '~/context/dutchSession';
 import { Send, CheckCircle, AlertCircle, Wand2, RefreshCcw } from 'lucide-react';
+import { FormattedText } from '~/components/FormattedText';
 import type { Route } from './+types/dutch.writing';
 
 export function meta({}: Route.MetaArgs) {
@@ -22,6 +23,7 @@ interface Exercise {
   theme: string;
   prompt: string;
   correct_answer?: string;
+  correct_answer_translation?: string;
   keywords?: Keyword[];
   question?: string;
 }
@@ -177,7 +179,7 @@ export default function WritingPage() {
                 }}
               >
                 <p style={{ margin: 0, lineHeight: 1.6 }}>
-                  {exercise.correct_answer || 'Reference answer is not available for this exercise yet.'}
+                  {exercise.correct_answer_translation ? <FormattedText text={exercise.correct_answer_translation} /> : 'Reference answer is not available for this exercise yet.'}
                 </p>
               </div>
             </details>
@@ -221,8 +223,10 @@ export default function WritingPage() {
                   <p style={{ background: 'rgba(255,255,255,0.04)', padding: '12px', borderRadius: '10px', fontStyle: 'italic', fontSize: '0.95rem' }}>"{result.improved_text}"</p>
                 </div>
                 <div style={{ marginBottom: '12px' }}>
-                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '6px' }}>Teacher's Model:</p>
-                  <p style={{ background: 'rgba(46,196,182,0.06)', padding: '12px', borderRadius: '10px', fontSize: '0.95rem' }}>{result.model_answer}</p>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '6px' }}>Teacher's Model (Dutch):</p>
+                  <div style={{ background: 'rgba(46,196,182,0.06)', padding: '12px', borderRadius: '10px', fontSize: '0.95rem' }}>
+                    <FormattedText text={exercise.correct_answer || ''} />
+                  </div>
                 </div>
                 <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', borderTop: '1px solid var(--glass-border)', paddingTop: '10px' }}>
                   <strong style={{ color: 'var(--text-light)' }}>Tip:</strong> {result.explanation}

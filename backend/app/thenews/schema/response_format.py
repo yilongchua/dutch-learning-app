@@ -12,3 +12,10 @@ class CaptionsExtracted(BaseModel):
 
 class ImagePromptsExtracted(BaseModel):
     image_prompts: List[str] = Field(default_factory=list, description="image prompts")
+
+
+class StructuredDutchExtracted(BaseModel):
+    structured_dutch : str = Field(default="", description="structured dutch")
+
+class TranslatedEnglishExtracted(BaseModel):
+    translated_english : str = Field(default="", description="translated english")

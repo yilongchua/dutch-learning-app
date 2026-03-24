@@ -1,7 +1,13 @@
 import uuid
 from backend.base.llm_base import LLMBase
 from typing import Optional, List, Dict
-from backend.app.thenews.schema.response_format import QuestionsExtracted, ArticleExtracted, ImagePromptsExtracted
+from backend.app.thenews.schema.response_format import (
+    QuestionsExtracted, 
+    ArticleExtracted, 
+    ImagePromptsExtracted, 
+    StructuredDutchExtracted, 
+    TranslatedEnglishExtracted
+)
 from backend.app.thenews.schema.news_item import NewsItemBase, NewsItem, ImageInfo
 from datetime import datetime
 from backend.config.config import settings
@@ -29,11 +35,19 @@ class LocalLLMService(LLMBase):
     
     async def translate_dutch_b1(self, news_item: NewsItem) -> NewsItem:
         """Translates a single text block to Dutch B1."""
-        system_prompt = "You are a professional Dutch translator (CEFR B1). Preparing Specific Content for CVanT B1 Learner translation, Output the information in specific format"
+        system_prompt = "You are a professional Dutch translator (CEFR B1). Preparing Specific Content for CVanT B1 Learner translation, Output the information in JSON format"
         user_prompt = self.render_prompt("translate_b1", news_item=news_item)
-        result = await self.generate_output(system_prompt, user_prompt, response_model=None)
-        news_item.output_captions = result
+        result = await self.generate_output(system_prompt, user_prompt, response_model=StructuredDutchExtracted)
+        translated_english = await self.translate_article(result.structured_dutch)
+        news_item.output_captions = result.structured_dutch + "\n" + translated_english
         return news_item
+    
+    async def translate_article(self, dutch_text: str) -> str:
+        """Translates a single text block to English."""
+        system_prompt = "You are a professional English translator. Preparing Specific Content for CVanT B1 Learner translation, Output the information in JSON format"
+        user_prompt = self.render_prompt("translate_article", text_to_translate=dutch_text)
+        result = await self.generate_output(system_prompt, user_prompt, response_model=TranslatedEnglishExtracted)
+        return result.translated_english
 
     async def generate_image_prompts(self, news_item:NewsItem) -> NewsItem:
         """Generates image prompts."""

@@ -4,6 +4,7 @@ import { getExercise, evaluateSpeaking, generateTheme } from '~/services/dutchAp
 import { useDutchSession } from '~/context/dutchSession';
 import { Mic, Square, CheckCircle, AlertCircle, RefreshCcw } from 'lucide-react';
 import { WavRecorder } from '~/utils/audioUtils';
+import { FormattedText } from '~/components/FormattedText';
 import type { Route } from './+types/dutch.speaking';
 
 export function meta({}: Route.MetaArgs) {
@@ -14,7 +15,7 @@ export function meta({}: Route.MetaArgs) {
 }
 
 interface Keyword { dutch: string; english: string; }
-interface Exercise { id?: number; theme: string; prompt: string; question?: string; keywords?: Keyword[]; }
+interface Exercise { id?: number; theme: string; prompt: string; question?: string; keywords?: Keyword[]; correct_answer?: string; }
 interface SpeakingResult {
   transcription: string;
   score: number;
@@ -228,8 +229,10 @@ export default function SpeakingPage() {
             </div>
 
             <div className="glass card" style={{ borderLeft: '4px solid var(--primary)' }}>
-              <h4 style={{ color: 'var(--primary)', marginBottom: '12px' }}>Teacher's Model Answer</h4>
-              <p style={{ fontStyle: 'italic', background: 'rgba(255,159,28,0.05)', padding: '14px', borderRadius: '10px', marginBottom: '16px', lineHeight: 1.6 }}>{result.model_answer}</p>
+              <h4 style={{ color: 'var(--primary)', marginBottom: '12px' }}>Teacher's Model Answer (Dutch)</h4>
+              <div style={{ fontStyle: 'italic', background: 'rgba(255,159,28,0.05)', padding: '14px', borderRadius: '10px', marginBottom: '16px', lineHeight: 1.6 }}>
+                <FormattedText text={exercise.correct_answer || ''} />
+              </div>
               <h4 style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Improvement Tips:</h4>
               <p style={{ fontSize: '0.9rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{result.improvement_tips}</p>
             </div>

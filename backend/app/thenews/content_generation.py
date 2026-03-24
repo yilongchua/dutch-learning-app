@@ -9,6 +9,7 @@ from backend.app.thenews.schema.theme import Theme
 from backend.app.thenews.schema.response_format import QuestionsExtracted
 from backend.app.thenews.service.llm_service import LocalLLMService
 from backend.base.websearch_service  import WebSearchService
+from backend.app.thenews.service.image_sync_service  import SYNC_INTERVAL_SECONDS
 from backend.base.comfy_base  import ComfyUIService
 from backend.schema.search import SearchResult
 from backend.config.config import DATA_DIR
@@ -22,7 +23,7 @@ class ContentGenerator:
         self.theme_file = theme_file
         print(self.theme_file)
         init_db()
-        self.num_questions : int= 5
+        self.num_questions : int= 1
         self.article_length : int= 4
         self.web_search = WebSearchService()
         self.llm = LocalLLMService()
@@ -42,6 +43,7 @@ class ContentGenerator:
                     return data.get("theme", [])
         return []
     async def run_pipeline(self):
+        SYNC_INTERVAL_SECONDS = 30
         themes = self._load_themes()
         print(f"[*] Loaded {len(themes)} themes for end-to-end testing.")
         for idx, theme_name in enumerate(themes):

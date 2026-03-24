@@ -4,6 +4,12 @@ from typing import Optional, List
 class NewThemeExtracted(BaseModel):
     theme : str = Field(default_factory=list, description="list of theme")
 
+class AnswerExtracted(BaseModel):
+    structured_dutch : str = Field(default="", description="structured dutch")
+
+class TranslatedEnglishExtracted(BaseModel):
+    translated_english : str = Field(default="", description="translated english")
+
 class KeywordsExtracted(BaseModel):
     dutch: str = Field(default="", description="dutch word")
     english: str = Field(default="", description="translated english")

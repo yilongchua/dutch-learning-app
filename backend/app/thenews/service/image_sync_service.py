@@ -9,7 +9,7 @@ from backend.base.comfy_base import ComfyUIService
 from backend.config.config import settings
 
 SYNC_INTERVAL_SECONDS = 30
-
+COUNTER = 0
 
 def _extract_generated_image_path(outputs: Dict[str, Any]) -> Optional[str]:
     """Extract absolute file path from ComfyUI /history outputs."""
@@ -73,10 +73,13 @@ async def background_image_sync():
         try:
             with Session(engine) as session:
                 # Include all item statuses to self-heal nested images_info states.
-                statement = select(NewsItem)
-                items: List[NewsItem] = session.exec(statement).all()
-                
+                items: List[NewsItem] = session.exec(select(NewsItem).where(NewsItem.status != "done")).all()
+                print(f"[Background Sync] {len(items)} NewsItems not done...")
+                # if news_item == 0, then sleep
+                # statement = select(NewsItem)
+                # items: List[NewsItem] = session.exec(statement).all()
                 if items:
+                    SYNC_INTERVAL_SECONDS = 30 # reset sync interval
                     print(f"[Background Sync] Checking {len(items)} NewsItems for image updates...")
                     
                     for item in items:
@@ -163,6 +166,12 @@ async def background_image_sync():
                             session.add(item)
                     
                     session.commit()
+                
+                else:
+                    if COUNTER > 3:
+                        SYNC_INTERVAL_SECONDS = 1800 # 30 minutes
+                    else:
+                        COUNTER += 1
                 
         except Exception as e:
             print(f"[Background Sync] Error in sync loop: {e}")
