@@ -69,6 +69,7 @@ async def background_image_sync():
     """
     print("[Background Sync] Starting ComfyUI unified image sync loop...")
     image_gen = ComfyUIService()
+    COUNTER = 0
     while True:
         try:
             with Session(engine) as session:
@@ -80,6 +81,7 @@ async def background_image_sync():
                 # items: List[NewsItem] = session.exec(statement).all()
                 if items:
                     SYNC_INTERVAL_SECONDS = 30 # reset sync interval
+                    COUNTER = 0
                     print(f"[Background Sync] Checking {len(items)} NewsItems for image updates...")
                     
                     for item in items:
