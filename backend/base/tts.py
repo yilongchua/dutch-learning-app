@@ -26,12 +26,22 @@ class XTTSv2Service:
 
     def _init_model(self):
         try:
-            torch.serialization.add_safe_globals([XttsConfig, XttsAudioConfig,
-                                                  BaseDatasetConfig, BaseAudioConfig, BaseTrainingConfig])
-        except Exception as e:
-            print(f"XTTSv2Service: Warning - could not register safe globals: {e}")
+            from TTS.api import TTS
+            from TTS.tts.configs.xtts_config import XttsConfig
+            from TTS.tts.models.xtts import XttsAudioConfig
+            from TTS.config.shared_configs import BaseAudioConfig, BaseDatasetConfig, BaseTrainingConfig
 
-        self.tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(self.device)
+            # Register safe globals for PyTorch 2.4+ safe loading
+            if hasattr(torch.serialization, 'add_safe_globals'):
+                torch.serialization.add_safe_globals([XttsConfig, XttsAudioConfig,
+                                                      BaseDatasetConfig, BaseAudioConfig, BaseTrainingConfig])
+            
+            self.tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(self.device)
+        except Exception as e:
+            print(f"XTTSv2Service: Error during model initialization: {e}")
+            import traceback
+            traceback.print_exc()
+
         print("XTTSv2Service: Model loaded.")
 
     def generate(self, text: str, output_path: str) -> bool:
