@@ -24,6 +24,12 @@ for _dir in [DUTCH_DATA_DIR, THENEWS_DATA_DIR, GRAPHICS_GENERATION_DATA_DIR, SCH
 # ---------------------------------------------------------------------------
 class Settings(BaseSettings):
     APP_NAME: str = "YL Unified App"
+    
+    # Connection Ports
+    BACKEND_PORT: int = Field(default=8010, env="BACKEND_PORT")
+    FRONTEND_PORT: int = Field(default=5173, env="FRONTEND_PORT")
+    
+    # Database Settings
 
     # ── Ports ──────────────────────────────────────────────────────────────
     BACKEND_PORT: int  = Field(default=8010, env="BACKEND_PORT")
@@ -58,6 +64,12 @@ class Settings(BaseSettings):
     IMAGE_DIR: str   = Field(default=str(DATA_DIR / "images"), env="IMAGE_DIR")
     AUDIO_DIR: str   = Field(default=str(DATA_DIR / "audio"),  env="AUDIO_DIR")
 
+    # Load from the project root .env
+    model_config = SettingsConfigDict(
+        env_file=BASE_DIR.parent / ".env", 
+        env_file_encoding="utf-8", 
+        extra="ignore"
+    )
     model_config = SettingsConfigDict(
         env_file=str(BASE_DIR.parent / ".env"),
         env_file_encoding="utf-8",

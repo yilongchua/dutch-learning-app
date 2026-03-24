@@ -6,17 +6,10 @@ import { defineConfig, loadEnv } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
 
 export default defineConfig(({ mode }) => {
-  const frontendDir = path.dirname(fileURLToPath(import.meta.url));
-  const repoRootDir = path.resolve(frontendDir, "..");
-
-  // Prefer frontend/.env (zrok writes here), then fall back to repo root .env.
-  const env = {
-    ...loadEnv(mode, repoRootDir, ""),
-    ...loadEnv(mode, frontendDir, ""),
-  };
+  // Load env file from the project root (..)
+  const env = loadEnv(mode, '../', '');
 
   return {
-    envDir: frontendDir,
     plugins: [tailwindcss(), reactRouter(), tsconfigPaths()],
     resolve: {
       dedupe: ['react', 'react-dom', 'react-router'],

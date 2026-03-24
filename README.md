@@ -39,9 +39,16 @@ thesystem/
 
 ```bash
 cd backend
+# 1. Prepare environment variables (Copy .env.example from root)
 cp ../.env.example ../.env
+
+# 2. Install dependencies
 pip install -r requirements.txt
+
+# 3. Download NLP models
 python -m spacy download nl_core_news_sm
+
+# 4. Start the server
 python main.py
 ```
 
