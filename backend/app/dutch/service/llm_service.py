@@ -15,54 +15,40 @@ class LocalLLMService(LLMBase):
         super().__init__(model=settings.MODEL, template_dir=prompt_dir)
         self.system_prompt = "You are a DUTCH LANGUAGE TEACHER & TRANSLATOR (B1 LEVEL)."
 
-    async def get_new_theme(self, current_themes: list[str]) -> str:
+    async def get_new_theme(self, current_themes: list[str]) -> NewThemeExtracted:
         """Generates a new theme using the LLM."""
         user_prompt = self.render_prompt("generate_theme", current_themes=current_themes)
         result = await self.generate_output(self.system_prompt, user_prompt, response_model=NewThemeExtracted)
         return result
         
-    async def generate_exercise(self, exercise: ExerciseContent) -> ExerciseContent:
+    async def generate_exercise(self, theme:str) -> NewExerciseExtracted:
         """High-level method to generate a specific exercise."""
-        user_prompt = self.render_prompt("generate_exercise", theme=exercise.theme)
+        user_prompt = self.render_prompt("generate_exercise", theme=theme)
         result = await self.generate_output(self.system_prompt, user_prompt, response_model=NewExerciseExtracted)
-        exercise.question = result.question
-        exercise.keywords = result.keywords
-        return exercise
+        return result
     
-    async def translate_answer(self, exercise: ExerciseContent) -> ExerciseContent:
+    async def translate_answer(self, text_to_translate:str) -> TranslatedEnglishExtracted:
         """High-level method to generate a answer."""
-        kwargs = {"text_to_translate": exercise.correct_answer}
+        kwargs = {"text_to_translate": text_to_translate}
         user_prompt = self.render_prompt("translate_answer", **kwargs)
         result = await self.generate_output(self.system_prompt, user_prompt, response_model=TranslatedEnglishExtracted)
-        exercise.correct_answer_translation = result.translated_english
-        return exercise
-
-    async def generate_answer(self, exercise: ExerciseContent) -> ExerciseContent:
+        return result
+        
+    async def generate_answer(self, question: str, keywords: list[str]) -> AnswerExtracted:
         """High-level method to generate a answer."""
-        kwargs = {"question": exercise.question, "keywords": exercise.keywords}
+        kwargs = {"question": question, "keywords": keywords}
         user_prompt = self.render_prompt("generate_answer", **kwargs)
         result = await self.generate_output(self.system_prompt, user_prompt, response_model=AnswerExtracted)
-        exercise.correct_answer = result.structured_dutch
-        exercise = await self.translate_answer(exercise)
-        return exercise
+        return result
         
-    async def generate_listening(self, exercise: ExerciseContent) -> ExerciseContent:
+    async def generate_listening(self, theme: str) -> NewListeningExtracted:
         """High-level method to generate a answer."""
-        user_prompt = self.render_prompt("generate_listening", theme=exercise.theme)
+        user_prompt = self.render_prompt("generate_listening", theme=theme)
         result = await self.generate_output(self.system_prompt, user_prompt, response_model=NewListeningExtracted)
-        exercise.audio_text = result.text
-        exercise.question = result.question
-        exercise.options = result.options
-        exercise.correct_answer = result.correct_answer
-        exercise.audio_translation = result.english_translation
-        return exercise
-
-    async def evaluate(self, exercise: ExerciseContent) -> ExerciseContent:
-        kwargs = {"question": exercise.question, "answer": exercise.user_answer}
+        return result
+        
+    async def evaluate(self, question: str, user_answer: str) -> EvaluatedExtracted:
+        kwargs = {"question": question, "answer": user_answer}
         user_prompt = self.render_prompt("evaluate_answer", **kwargs)
         result = await self.generate_output(self.system_prompt, user_prompt, response_model=EvaluatedExtracted)
-        exercise.score = result.score
-        exercise.score_breakdown = result.score_breakdown
-        exercise.improved_text = result.improved_text
-        exercise.feedback = result.feedback
-        return exercise
+        return result

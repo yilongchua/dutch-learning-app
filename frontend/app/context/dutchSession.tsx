@@ -17,7 +17,7 @@ interface SpeakingSessionState {
 
 interface ListeningSessionState {
   exercise: PersistedExercise;
-  selected: string | null;
+  selected: Record<number, string>;
   showResult: boolean;
   playbackSpeed: number;
 }
@@ -49,7 +49,7 @@ const defaultState: DutchSessionState = {
   currentTheme: 'Dagelijkse routine',
   writing: { exercise: null, text: '', result: null },
   speaking: { exercise: null, result: null, hasRecording: false },
-  listening: { exercise: null, selected: null, showResult: false, playbackSpeed: 1 },
+  listening: { exercise: null, selected: {}, showResult: false, playbackSpeed: 1 },
 };
 
 const DutchSessionContext = createContext<DutchSessionContextValue | null>(null);
@@ -88,12 +88,17 @@ export function DutchSessionProvider({ children }: { children: React.ReactNode }
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
+        const storedSelected = parsed?.listening?.selected;
+        const normalizedSelected =
+          storedSelected && typeof storedSelected === 'object' && !Array.isArray(storedSelected)
+            ? storedSelected
+            : {};
         setState({
           ...defaultState,
           ...parsed,
           writing: { ...defaultState.writing, ...(parsed?.writing || {}) },
           speaking: { ...defaultState.speaking, ...(parsed?.speaking || {}) },
-          listening: { ...defaultState.listening, ...(parsed?.listening || {}) },
+          listening: { ...defaultState.listening, ...(parsed?.listening || {}), selected: normalizedSelected },
         });
       }
     } catch (err) {

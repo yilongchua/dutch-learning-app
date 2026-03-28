@@ -6,6 +6,7 @@ os.environ["COQUI_TOS_AGREED"] = "1"
 
 # Non-heavy imports
 import torch
+from backend.config.config import settings
 
 class NativeSayService:
     def __init__(self, voice="Xander"):
@@ -22,6 +23,7 @@ class XTTSv2Service:
     def __init__(self):
         self.device = "mps"
         self.tts = None
+        self.speaker_wav = settings.XTTS_SPEAKER_WAV
         self._init_model()
 
     def _init_model(self):
@@ -46,8 +48,11 @@ class XTTSv2Service:
 
     def generate(self, text: str, output_path: str) -> bool:
         try:
+            if not self.speaker_wav or not os.path.exists(self.speaker_wav):
+                print("XTTSv2Service: No valid speaker wav provided; skipping XTTS generation.")
+                return False
             print(f"XTTSv2Service: Generating audio for: {text[:30]}...")
-            self.tts.tts_to_file(text=text, speaker_wav=None, language="nl", file_path=output_path)
+            self.tts.tts_to_file(text=text, speaker_wav=self.speaker_wav, language="nl", file_path=output_path)
             return os.path.exists(output_path)
         except Exception as e:
             print(f"XTTSv2Service: Error: {e}")
@@ -77,7 +82,8 @@ class TTSService:
 
             # Randomly choose between backends (50/50 chance)
             # Note: XTTS will be initialized on first selection
-            use_xtts = random.random() < 0.5
+            speaker_wav_ok = bool(settings.XTTS_SPEAKER_WAV) and os.path.exists(settings.XTTS_SPEAKER_WAV)
+            use_xtts = speaker_wav_ok and (random.random() < 0.5)
             
             success = False
             service_name = "None"

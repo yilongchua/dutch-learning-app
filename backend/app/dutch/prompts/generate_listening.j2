@@ -1,22 +1,41 @@
+You are an expert Dutch language instructor specializing in CEFR B1 level assessment.
 Generate a Dutch B1 listening exercise transcript and question about the theme: {{ theme }}.
 
-Complexity requirement:
-Include slightly confusing elements where the speaker might change their mind, clarify a previous statement, or mention multiple similar-sounding details (numbers, times, names) to ensure the listener must understand the full context.
+### Task
+Generate a Dutch listening exercise transcript based on the theme: {{ theme }}.
+The output must be a single JSON object containing the transcript and a list of 3 distinct multiple-choice questions.
 
-Example:
+### Complexity Requirements (B1 Level)
+1. **Misdirection:** The speaker must change their mind, correct a previous statement, or clarify a detail (e.g., "I thought X, but actually Y").
+    - Include slightly confusing elements where the speaker might change their mind, clarify a previous statement, or mention multiple similar-sounding details (numbers, times, names) to ensure the listener must understand the full context.
+2. **Detail Density:** Include multiple similar-sounding times, numbers, or names to test contextual understanding.
+3. **Natural Flow:** Use B1-level vocabulary (e.g., *uiteindelijk*, *toevallig*, *rekening houden met*).
+
+Example of structure:
+    - "text": "Ik wilde eerst om drie uur naar de kapper gaan, maar dat kwam niet goed uit met mijn werk. Toen heb ik geprobeerd voor vijf uur af te spreken, maar zij hadden pas tijd om half zes. Uiteindelijk heb ik de afspraak verzet naar morgenochtend om negen uur. Mijn haar is echt te lang dus ik moet wel gaan. Ik hoop dat ik dan niet te laat ben voor mijn eerste vergadering om tien uur. De kapper zei dat het ongeveer veertig minuten zal duren. Dus dat moet wel lukken als ik direct daarna doorrij naar kantoor. Ik heb er zin in om weer een fris kapsel te hebben.",
+    - "english_translation": "I initially wanted to go to the hairdresser at three o'clock, but that didn't work out with my work. Then I tried to make an appointment for five o'clock, but they only had time at half past five. Eventually, I moved the appointment to tomorrow morning at nine o'clock. My hair is really too long so I have to go. I hope I won't be late for my first meeting at ten o'clock then. The hairdresser said it will take about forty minutes. So that should work if I drive straight to the office afterwards. I'm looking forward to having a fresh haircut again."
+    Prodoce 2 specific questions
+        - "question": "Wanneer is de definitieve afspraak bij de kapper?",
+        - "options": ["Vandaag om drie uur", "Vandaag om half zes", "Morgenochtend om negen uur", "Morgenochtend om tien uur"],
+        - "correct_answer": "Morgenochtend om negen uur",
+
+# STRUCTURE OUTPUT FORMAT MUST be a valid JSON object. NO MARKDOWN, NO EXTRA COMMENTS, NO PREAMBLE
+
+### Output Format
+Return ONLY a valid JSON object. No markdown formatting, no preamble, and no extra comments.
 {
-    "text": "Ik wilde eerst om drie uur naar de kapper gaan, maar dat kwam niet goed uit met mijn werk. Toen heb ik geprobeerd voor vijf uur af te spreken, maar zij hadden pas tijd om half zes. Uiteindelijk heb ik de afspraak verzet naar morgenochtend om negen uur. Mijn haar is echt te lang dus ik moet wel gaan. Ik hoop dat ik dan niet te laat ben voor mijn eerste vergadering om tien uur. De kapper zei dat het ongeveer veertig minuten zal duren. Dus dat moet wel lukken als ik direct daarna doorrij naar kantoor. Ik heb er zin in om weer een fris kapsel te hebben.",
-    "question": "Wanneer is de definitieve afspraak bij de kapper?",
-    "options": ["Vandaag om drie uur", "Vandaag om half zes", "Morgenochtend om negen uur", "Morgenochtend om tien uur"],
-    "correct_answer": "Morgenochtend om negen uur",
-    "english_translation": "I initially wanted to go to the hairdresser at three o'clock, but that didn't work out with my work. Then I tried to make an appointment for five o'clock, but they only had time at half past five. Eventually, I moved the appointment to tomorrow morning at nine o'clock. My hair is really too long so I have to go. I hope I won't be late for my first meeting at ten o'clock then. The hairdresser said it will take about forty minutes. So that should work if I drive straight to the office afterwards. I'm looking forward to having a fresh haircut again."
+  "text": "The full Dutch transcript (approx. 100-150 words).",
+  "english_translation": "A faithful English translation of the Dutch text.",
+  "exercises": [
+    {
+      "question": "A specific question in Dutch about a detail in the text.",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct_answer": "The exact string of the correct option.",
+    },
+    {
+      "question": "A specific question in Dutch about a detail in the text.",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correct_answer": "The exact string of the correct option.",
+    }
+  ]
 }
-# STRUCTURE OUTPUT FORMAT MUST be a valid JSON object. NO MARKDOWN, NO EXTRA COMMENTS
-{
- "text": A Dutch transcript (approximately 4-7 sentences).
- "question" : A multiple-choice question about a specific detail in the transcript.
- "options": A list of 4 possible answers. Make them very similar and plausible (close distractors) to test true understanding.
- "correct_answer": The correct string from the options.
- "english_translation": A faithful English translation of the text
- }
-

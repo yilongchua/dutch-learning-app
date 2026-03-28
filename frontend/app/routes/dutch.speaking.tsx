@@ -15,13 +15,12 @@ export function meta({}: Route.MetaArgs) {
 }
 
 interface Keyword { dutch: string; english: string; }
-interface Exercise { id?: number; theme: string; prompt: string; question?: string; keywords?: Keyword[]; correct_answer?: string; }
+interface Exercise { id?: number; theme: string; question: string; keywords?: Keyword[]; correct_answer?: string; correct_answer_translation?: string; }
 interface SpeakingResult {
-  transcription: string;
+  user_answer: string;
   score: number;
   feedback: string;
-  model_answer: string;
-  improvement_tips: string;
+  improved_text: string;
 }
 
 export default function SpeakingPage() {
@@ -52,9 +51,15 @@ export default function SpeakingPage() {
       }
 
       const res = await getExercise('speaking', theme);
-      const mapped = {
-        ...res.data,
-        prompt: res.data.question || res.data.prompt,
+      const data = res.data || {};
+      const exerciseData = data.exercise || {};
+      const mapped: Exercise = {
+        id: data.id,
+        theme: data.theme || theme,
+        question: exerciseData.question || '',
+        keywords: exerciseData.keywords || [],
+        correct_answer: exerciseData.correct_answer,
+        correct_answer_translation: exerciseData.correct_answer_translation,
       };
       setCurrentTheme(mapped.theme || theme);
       setSpeakingState({
@@ -109,12 +114,12 @@ export default function SpeakingPage() {
     }
     formData.append('user_id', 'local_user');
     formData.append('theme', exercise.theme);
-    formData.append('prompt', exercise.prompt || exercise.question || '');
+    formData.append('prompt', exercise.question || '');
     formData.append('date', new Date().toISOString().split('T')[0]);
     formData.append('keywords', JSON.stringify(exercise.keywords || []));
     try {
       const res = await evaluateSpeaking(formData);
-      setSpeakingState({ result: res.data });
+      setSpeakingState({ result: res.data?.exercise || null });
     } catch {
       // keep existing silent flow
     } finally {
@@ -162,7 +167,7 @@ export default function SpeakingPage() {
             <Mic size={28} color="var(--secondary)" />
           </div>
           <h3 style={{ color: 'var(--secondary)', marginBottom: '10px' }}>Role Play Scenario</h3>
-          <p style={{ fontSize: '1.1rem', fontWeight: 600, lineHeight: 1.6 }}>{exercise.prompt}</p>
+          <p style={{ fontSize: '1.1rem', fontWeight: 600, lineHeight: 1.6 }}>{exercise.question}</p>
 
           {exercise.keywords && exercise.keywords.length > 0 && (
             <div style={{ marginTop: '20px' }}>
@@ -177,6 +182,25 @@ export default function SpeakingPage() {
               </div>
             </div>
           )}
+
+          <details style={{ marginTop: '16px' }}>
+            <summary style={{ cursor: 'pointer', color: 'var(--text-muted)', fontWeight: 600 }}>
+              Show Reference Answer
+            </summary>
+            <div
+              style={{
+                marginTop: '10px',
+                padding: '14px',
+                borderRadius: '10px',
+                background: 'rgba(255,255,255,0.03)',
+                border: '1px solid var(--glass-border)',
+              }}
+            >
+              <p style={{ margin: 0, lineHeight: 1.6 }}>
+                {exercise.correct_answer_translation ? <FormattedText text={exercise.correct_answer_translation} /> : 'Reference answer is not available for this exercise yet.'}
+              </p>
+            </div>
+          </details>
 
           <div style={{ marginTop: '28px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '16px' }}>
             {!isRecording ? (
@@ -218,10 +242,10 @@ export default function SpeakingPage() {
                 <h2 style={{ fontSize: '3rem', color: 'var(--secondary)' }}>{Math.round(result.score)}%</h2>
                 <p style={{ color: 'var(--text-muted)' }}>Fluency & Accuracy</p>
               </div>
-              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '12px', marginBottom: '16px' }}>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '6px' }}>TRANSCRIPTION</p>
-                <p style={{ fontStyle: 'italic', fontSize: '0.95rem' }}>"{result.transcription}"</p>
-              </div>
+                <div style={{ background: 'rgba(255,255,255,0.03)', padding: '16px', borderRadius: '12px', marginBottom: '16px' }}>
+                  <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '6px' }}>TRANSCRIPTION</p>
+                  <p style={{ fontStyle: 'italic', fontSize: '0.95rem' }}>"{result.user_answer}"</p>
+                </div>
               <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
                 <CheckCircle size={16} color="var(--secondary)" /> AI Feedback
               </h4>
@@ -233,8 +257,8 @@ export default function SpeakingPage() {
               <div style={{ fontStyle: 'italic', background: 'rgba(255,159,28,0.05)', padding: '14px', borderRadius: '10px', marginBottom: '16px', lineHeight: 1.6 }}>
                 <FormattedText text={exercise.correct_answer || ''} />
               </div>
-              <h4 style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Improvement Tips:</h4>
-              <p style={{ fontSize: '0.9rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{result.improvement_tips}</p>
+              <h4 style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '8px' }}>Improved Response:</h4>
+              <p style={{ fontSize: '0.9rem', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>{result.improved_text}</p>
             </div>
           </motion.div>
         )}

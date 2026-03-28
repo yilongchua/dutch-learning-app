@@ -21,19 +21,16 @@ interface Keyword {
 interface Exercise {
   id?: number;
   theme: string;
-  prompt: string;
+  question: string;
   correct_answer?: string;
   correct_answer_translation?: string;
   keywords?: Keyword[];
-  question?: string;
 }
 
 interface EvalResult {
   score: number;
   feedback: string;
   improved_text: string;
-  model_answer: string;
-  explanation: string;
 }
 
 export default function WritingPage() {
@@ -65,10 +62,15 @@ export default function WritingPage() {
       }
 
       const res = await getExercise('writing', theme);
-      const data = res.data;
-      const mapped = {
-        ...data,
-        prompt: data.question || data.prompt,
+      const data = res.data || {};
+      const exerciseData = data.exercise || {};
+      const mapped: Exercise = {
+        id: data.id,
+        theme: data.theme || theme,
+        question: exerciseData.question || '',
+        correct_answer: exerciseData.correct_answer,
+        correct_answer_translation: exerciseData.correct_answer_translation,
+        keywords: exerciseData.keywords || [],
       };
 
       setCurrentTheme(mapped.theme || theme);
@@ -103,10 +105,16 @@ export default function WritingPage() {
         id: exercise.id,
         text,
         theme: exercise.theme,
-        prompt: exercise.prompt || exercise.question,
+        prompt: exercise.question,
         exercise_type: 'writing',
+        exercise: {
+          question: exercise.question,
+          keywords: exercise.keywords || [],
+          correct_answer: exercise.correct_answer || '',
+          correct_answer_translation: exercise.correct_answer_translation || '',
+        },
       });
-      setWritingState({ result: res.data });
+      setWritingState({ result: res.data?.exercise || null });
       fetchHistoryFromBackend();
     } catch {
       // Error remains shown in existing UI flow.
@@ -154,7 +162,7 @@ export default function WritingPage() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <section className="glass card">
             <h3 style={{ color: 'var(--primary)', marginBottom: '12px' }}>Assignment</h3>
-            <p style={{ lineHeight: 1.7, fontSize: '1.05rem' }}>{exercise.prompt}</p>
+            <p style={{ lineHeight: 1.7, fontSize: '1.05rem' }}>{exercise.question}</p>
             {exercise.keywords && exercise.keywords.length > 0 && (
               <div style={{ marginTop: '16px', display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                 {exercise.keywords.map((kw, i) => (
@@ -228,9 +236,6 @@ export default function WritingPage() {
                     <FormattedText text={exercise.correct_answer || ''} />
                   </div>
                 </div>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', borderTop: '1px solid var(--glass-border)', paddingTop: '10px' }}>
-                  <strong style={{ color: 'var(--text-light)' }}>Tip:</strong> {result.explanation}
-                </p>
               </div>
             </motion.div>
           ) : (
@@ -247,13 +252,13 @@ export default function WritingPage() {
                 {history.slice(0, 10).map((item) => (
                   <div key={item.id} className="glass card" style={{ padding: '14px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
-                      <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{item.score}%</span>
+                      <span style={{ color: 'var(--primary)', fontWeight: 700 }}>{item.exercise?.score ?? item.score ?? 0}%</span>
                       <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                         {item.created_at ? new Date(item.created_at).toLocaleDateString() : (item.date || '')}
                       </span>
                     </div>
                     <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', fontStyle: 'italic', overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>
-                      {item.user_answer || item.user_text}
+                      {item.exercise?.user_answer || item.user_answer || item.user_text}
                     </p>
                   </div>
                 ))}

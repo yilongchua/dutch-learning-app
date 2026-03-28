@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse
 import asyncio
 
 from backend.app.dutch.core.database import get_session
-from backend.app.dutch.schema.schemas import ExerciseContent, ExerciseContentReceive
+from backend.app.dutch.schema.schemas import ExerciseContent, ExerciseContentReceive, SpeakingWritingExercise
 from backend.app.dutch.service.llm_service import LocalLLMService
 from backend.app.dutch.service.evaluator import EvaluatorService
 from backend.app.dutch.service.exercise_queue import exercise_queue_service
@@ -24,7 +24,6 @@ router = APIRouter(tags=["dutch"])
 
 # Services instances
 llm_service = LocalLLMService()
-evaluator_service = EvaluatorService()
 asr_service = ASRService()
 tts_service = TTSService()
 @router.get("/")
@@ -76,22 +75,20 @@ async def get_exercise(category: str, theme: str = "Dagelijkse routine"):
 @router.post("/evaluate/writing")
 async def evaluate_writing(payload: ExerciseContentReceive, session: Session = Depends(get_session)):
     # 1. Fetch existing exercise if ID is provided, or create new one
+    exercise = None
     if payload.id:
         exercise = session.get(ExerciseContent, payload.id)
-        if not exercise:
-            # Fallback to new if id provided but not found
-            exercise = ExerciseContent()
-    else:
-        exercise = ExerciseContent()
+    if not exercise:
+        exercise = ExerciseContent(
+            theme=payload.theme,
+            exercise_type=payload.exercise_type or "writing",
+        )
+        if payload.exercise is not None:
+            exercise.exercise = payload.exercise
+        else:
+            exercise.exercise = SpeakingWritingExercise(question=payload.prompt or "")
 
-    # 2. Map frontend data to model fields
-    # Use direct values or fallback to aliases (text/prompt/date)
-    exercise.user_answer = payload.user_answer or payload.text or ""
-    exercise.question = payload.question or payload.prompt or ""
-    exercise.theme = payload.theme or exercise.theme
-    exercise.exercise_type = payload.exercise_type or exercise.exercise_type or "writing"
-    
-    # 3. Handle status and dates
+    exercise.exercise.user_answer = payload.text or ""
     exercise.status = "completed"
     exercise.updated_at = datetime.now(timezone.utc)
     if payload.date:
@@ -99,22 +96,18 @@ async def evaluate_writing(payload: ExerciseContentReceive, session: Session = D
     else:
         exercise.date_completed = datetime.now().strftime("%Y-%m-%d")
 
-    # 4. Evaluation logic
-    # Rule-based
-    rule_results = evaluator_service.evaluate_writing(exercise.user_answer)
-    
-    # LLM-based (updates score, breakdown, feedback, etc. in place)
-    exercise = await llm_service.evaluate(exercise)
-    
-    # Optional enhancement: merge rule feedback
-    if rule_results['rule_score'] < 100:
-        exercise.feedback = f"{rule_results['rule_feedback']}\n\n{exercise.feedback}"
-    
+    # LLM-based (updates score, feedback, improved text)
+    question = exercise.exercise.question or payload.prompt or ""
+    result = await llm_service.evaluate(question, payload.text or "")
+    exercise.exercise.score = result.score
+    exercise.exercise.improved_text = result.improved_text
+    exercise.exercise.feedback = result.feedback
+
     # 5. Save/Update in DB
     session.add(exercise)
     session.commit()
     session.refresh(exercise)
-    
+    # reutrn back schema or dict?
     return exercise
 
 @router.post("/evaluate/speaking")
@@ -136,36 +129,40 @@ async def evaluate_speaking(
     
     # Transcribe
     transcription = asr_service.transcribe(audio_path)
-    
+    exercise = None
     if exercise_id:
         exercise = session.get(ExerciseContent, exercise_id)
-        if not exercise:
-            exercise = ExerciseContent()
-    else:
-        exercise = ExerciseContent()
-
-    exercise.exercise_type = "speaking"
-    exercise.theme = theme
-    exercise.question = prompt
-    exercise.user_answer = transcription
+    if not exercise:
+        parsed_keywords = []
+        try:
+            parsed_keywords = json.loads(keywords) if keywords else []
+        except Exception:
+            parsed_keywords = []
+        speaking_exe = SpeakingWritingExercise(
+            question=prompt,
+            keywords=parsed_keywords,
+        )
+        exercise = ExerciseContent(
+            exercise_type="speaking",
+            theme=theme,
+            exercise=speaking_exe)
+    
+    
+    exercise.exercise.user_answer = transcription
     exercise.status = "completed"
     exercise.date_completed = date
     exercise.updated_at = datetime.now(timezone.utc)
     
-    result = await llm_service.evaluate(exercise)
+    result = await llm_service.evaluate(prompt, transcription)
+    exercise.exercise.score = result.score
+    exercise.exercise.improved_text = result.improved_text
+    exercise.exercise.feedback = result.feedback
     
-    session.add(result)
+    session.add(exercise)
     session.commit()
-    session.refresh(result)
+    session.refresh(exercise)
     
-    return {
-        "transcription": transcription,
-        "score": result.score,
-        "feedback": result.feedback,
-        "improved_text": result.improved_text,
-        "score_breakdown": result.score_breakdown,
-        "exercise_id": result.id
-    }
+    return exercise
 
 @router.get("/tts")
 async def get_tts(text: str):

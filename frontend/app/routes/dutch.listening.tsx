@@ -15,12 +15,16 @@ export function meta({}: Route.MetaArgs) {
 interface Exercise {
   id?: number;
   theme: string;
+  audio_text: string;
+  audio_translation: string;
+  audio_url?: string;
+  questions: ListeningQuestion[];
+}
+
+interface ListeningQuestion {
   question: string;
-  audio_text?: string;
-  text: string;
   options: string[];
   correct_answer: string;
-  english_translation: string;
 }
 
 export default function ListeningPage() {
@@ -49,16 +53,20 @@ export default function ListeningPage() {
       }
 
       const res = await getExercise('listening', theme);
+      const data = res.data || {};
+      const exerciseData = data.exercise || {};
       const mapped = {
-        ...res.data,
-        audio_text: res.data.audio_text || '',
-        text: res.data.audio_text || res.data.text || '',
-        english_translation: res.data.audio_translation || res.data.english_translation || '',
+        id: data.id,
+        theme: data.theme || theme,
+        audio_text: exerciseData.audio_text || '',
+        audio_translation: exerciseData.audio_translation || '',
+        audio_url: exerciseData.audio_url || '',
+        questions: Array.isArray(exerciseData.questions) ? exerciseData.questions : [],
       };
       setCurrentTheme(mapped.theme || theme);
       setListeningState({
         exercise: mapped,
-        selected: null,
+        selected: {},
         showResult: false,
       });
       setAudioUrl('');
@@ -87,7 +95,7 @@ export default function ListeningPage() {
     if (!exercise) return;
     setAudioLoading(true);
     try {
-      const res = await dutchApi.get('/tts', { params: { text: exercise.text }, responseType: 'blob' });
+      const res = await dutchApi.get('/tts', { params: { text: exercise.audio_text }, responseType: 'blob' });
       const url = URL.createObjectURL(new Blob([res.data], { type: 'audio/wav' }));
       setAudioUrl(url);
     } catch {
@@ -135,8 +143,7 @@ export default function ListeningPage() {
   );
 
   if (!exercise) return null;
-
-  const isCorrect = selected === exercise.correct_answer;
+  const unanswered = exercise.questions.some((_, idx) => !selected[idx]);
 
   return (
     <div className="page-container">
@@ -240,53 +247,72 @@ export default function ListeningPage() {
                 border: '1px solid var(--glass-border)',
               }}
             >
-              <p style={{ margin: 0, lineHeight: 1.6 }}>
-                {exercise.audio_text || exercise.text || 'Transcript is not available yet.'}
-              </p>
-            </div>
+                  <p style={{ margin: 0, lineHeight: 1.6 }}>
+                    {exercise.audio_text || 'Transcript is not available yet.'}
+                  </p>
+                </div>
           </details>
         </section>
 
         <section className="glass card">
-          <h3 style={{ marginBottom: '20px' }}>{exercise.question}</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-            {exercise.options.map((opt) => (
-              <button
-                key={opt}
-                onClick={() => !showResult && setListeningState({ selected: opt })}
-                style={{
-                  padding: '14px 18px',
-                  borderRadius: '12px',
-                  textAlign: 'left',
-                  cursor: showResult ? 'default' : 'pointer',
-                  border: selected === opt ? '2px solid var(--primary)' : '1px solid var(--glass-border)',
-                  background: selected === opt ? 'rgba(255,159,28,0.08)' : 'transparent',
-                  color: 'var(--text-light)',
-                  fontSize: '0.95rem',
-                  fontFamily: 'inherit',
-                  transition: 'all 0.2s',
-                }}
-              >
-                {opt}
-              </button>
-            ))}
-          </div>
+          {exercise.questions.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)' }}>No questions available for this exercise yet.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+              {exercise.questions.map((q, idx) => {
+                const selectedOpt = selected[idx];
+                const isCorrect = selectedOpt === q.correct_answer;
+                return (
+                  <div key={`${idx}-${q.question}`}>
+                    <h3 style={{ marginBottom: '16px' }}>{q.question}</h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {q.options.map((opt) => (
+                        <button
+                          key={opt}
+                          onClick={() => !showResult && setListeningState({ selected: { ...selected, [idx]: opt } })}
+                          style={{
+                            padding: '14px 18px',
+                            borderRadius: '12px',
+                            textAlign: 'left',
+                            cursor: showResult ? 'default' : 'pointer',
+                            border: selectedOpt === opt ? '2px solid var(--primary)' : '1px solid var(--glass-border)',
+                            background: selectedOpt === opt ? 'rgba(255,159,28,0.08)' : 'transparent',
+                            color: 'var(--text-light)',
+                            fontSize: '0.95rem',
+                            fontFamily: 'inherit',
+                            transition: 'all 0.2s',
+                          }}
+                        >
+                          {opt}
+                        </button>
+                      ))}
+                    </div>
+
+                    {showResult && (
+                      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} style={{ marginTop: '16px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: isCorrect ? 'var(--secondary)' : 'var(--error)' }}>
+                          {isCorrect ? <CheckCircle size={20} /> : <AlertCircle size={20} />}
+                          <span style={{ fontWeight: 700 }}>{isCorrect ? 'Correct!' : `Actually: ${q.correct_answer}`}</span>
+                        </div>
+                      </motion.div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
 
           <div style={{ marginTop: '28px' }}>
             {!showResult ? (
-              <button className="btn btn-primary" disabled={!selected} onClick={() => setListeningState({ showResult: true })}>
+              <button className="btn btn-primary" disabled={unanswered || exercise.questions.length === 0} onClick={() => setListeningState({ showResult: true })}>
                 Check Answer
               </button>
             ) : (
               <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: isCorrect ? 'var(--secondary)' : 'var(--error)' }}>
-                  {isCorrect ? <CheckCircle size={22} /> : <AlertCircle size={22} />}
-                  <span style={{ fontWeight: 700, fontSize: '1.15rem' }}>{isCorrect ? 'Correct!' : `Actually: ${exercise.correct_answer}`}</span>
-                </div>
                 <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '12px', borderLeft: '4px solid var(--primary)' }}>
                   <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginBottom: '8px', textTransform: 'uppercase' }}>Transcript</p>
-                  <p style={{ fontWeight: 600, marginBottom: '14px', lineHeight: 1.6 }}>{exercise.text}</p>
-                  <p style={{ fontStyle: 'italic', color: 'var(--text-muted)', fontSize: '0.9rem' }}>{exercise.english_translation}</p>
+                  <p style={{ fontWeight: 600, marginBottom: '14px', lineHeight: 1.6 }}>{exercise.audio_text}</p>
+                  <p style={{ fontStyle: 'italic', color: 'var(--text-muted)', fontSize: '0.9rem' }}>{exercise.audio_translation}</p>
                 </div>
               </motion.div>
             )}
