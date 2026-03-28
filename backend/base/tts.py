@@ -3,6 +3,8 @@ from typing import Optional
 
 # Auto-accept Coqui TTS non-commercial license agreement
 os.environ["COQUI_TOS_AGREED"] = "1"
+# Allow CPU fallback for unsupported MPS ops (prevents hard failures on Apple Silicon)
+os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
 
 # Non-heavy imports
 import torch
@@ -21,7 +23,7 @@ class NativeSayService:
 
 class XTTSv2Service:
     def __init__(self):
-        self.device = "mps"
+        self.device = "cpu"
         self.tts = None
         self.speaker_wav = settings.XTTS_SPEAKER_WAV
         self._init_model()
@@ -83,7 +85,7 @@ class TTSService:
             # Randomly choose between backends (50/50 chance)
             # Note: XTTS will be initialized on first selection
             speaker_wav_ok = bool(settings.XTTS_SPEAKER_WAV) and os.path.exists(settings.XTTS_SPEAKER_WAV)
-            use_xtts = speaker_wav_ok and (random.random() < 0.5)
+            use_xtts = speaker_wav_ok
             
             success = False
             service_name = "None"
@@ -93,6 +95,10 @@ class TTSService:
                 if xtts:
                     service_name = "XTTSv2"
                     success = xtts.generate(text, output_path)
+                    if not success:
+                        print("TTSService: XTTS failed, falling back to NativeSay")
+                        service_name = "NativeSay (Fallback)"
+                        success = self.say_service.generate(text, output_path)
                 else:
                     print("TTSService: Falling back to 'say' because XTTS failed to init")
                     service_name = "NativeSay (Fallback)"

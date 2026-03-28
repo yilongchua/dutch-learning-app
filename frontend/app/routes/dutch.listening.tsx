@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import dutchApi, { getExercise, generateTheme } from '~/services/dutchApi';
+import { getExercise, generateTheme } from '~/services/dutchApi';
 import { useDutchSession } from '~/context/dutchSession';
 import { Play, Pause, CheckCircle, AlertCircle, RefreshCcw } from 'lucide-react';
 import type { Route } from './+types/dutch.listening';
@@ -36,7 +36,6 @@ export default function ListeningPage() {
 
   const [audioUrl, setAudioUrl] = useState('');
   const [loading, setLoading] = useState(false);
-  const [audioLoading, setAudioLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -55,12 +54,16 @@ export default function ListeningPage() {
       const res = await getExercise('listening', theme);
       const data = res.data || {};
       const exerciseData = data.exercise || {};
+      const rawAudioUrl = exerciseData.audio_url || '';
+      const normalizedAudioUrl = rawAudioUrl
+        ? (rawAudioUrl.startsWith('/api/') ? rawAudioUrl : `/api/dutch/audio/${rawAudioUrl.split('/').pop()}`)
+        : '';
       const mapped = {
         id: data.id,
         theme: data.theme || theme,
         audio_text: exerciseData.audio_text || '',
         audio_translation: exerciseData.audio_translation || '',
-        audio_url: exerciseData.audio_url || '',
+        audio_url: normalizedAudioUrl,
         questions: Array.isArray(exerciseData.questions) ? exerciseData.questions : [],
       };
       setCurrentTheme(mapped.theme || theme);
@@ -69,7 +72,7 @@ export default function ListeningPage() {
         selected: {},
         showResult: false,
       });
-      setAudioUrl('');
+      setAudioUrl(mapped.audio_url || '');
       setCurrentTime(0);
       setDuration(0);
       setError(null);
@@ -92,17 +95,8 @@ export default function ListeningPage() {
       audioRef.current?.[isPlaying ? 'pause' : 'play']();
       return;
     }
-    if (!exercise) return;
-    setAudioLoading(true);
-    try {
-      const res = await dutchApi.get('/tts', { params: { text: exercise.audio_text }, responseType: 'blob' });
-      const url = URL.createObjectURL(new Blob([res.data], { type: 'audio/wav' }));
-      setAudioUrl(url);
-    } catch {
-      // keep existing silent flow
-    } finally {
-      setAudioLoading(false);
-    }
+    if (!exercise?.audio_url) return;
+    setAudioUrl(exercise.audio_url);
   };
 
   useEffect(() => {
@@ -144,6 +138,7 @@ export default function ListeningPage() {
 
   if (!exercise) return null;
   const unanswered = exercise.questions.some((_, idx) => !selected[idx]);
+  const audioReady = Boolean(exercise.audio_url);
 
   return (
     <div className="page-container">
@@ -173,7 +168,7 @@ export default function ListeningPage() {
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handlePlayAudio}
-              disabled={audioLoading}
+              disabled={!audioReady}
               style={{
                 width: 52,
                 height: 52,
@@ -189,7 +184,7 @@ export default function ListeningPage() {
                 boxShadow: '0 6px 20px var(--primary-glow)',
               }}
             >
-              {audioLoading ? <RefreshCcw className="spinning" size={22} /> : isPlaying ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" style={{ marginLeft: 2 }} />}
+              {!audioReady ? <RefreshCcw className="spinning" size={22} /> : isPlaying ? <Pause size={22} fill="currentColor" /> : <Play size={22} fill="currentColor" style={{ marginLeft: 2 }} />}
             </motion.button>
 
             <div style={{ flex: 1 }}>
@@ -231,7 +226,7 @@ export default function ListeningPage() {
           </div>
 
           <p style={{ textAlign: 'center', color: 'var(--text-muted)', marginTop: '14px', fontSize: '0.85rem' }}>
-            {audioLoading ? 'Generating audio...' : isPlaying ? '▶ Playing' : '▶ Click to play audio'}
+            {!audioReady ? 'Audio not ready yet.' : isPlaying ? '▶ Playing' : '▶ Click to play audio'}
           </p>
 
           <details style={{ marginTop: '16px' }}>

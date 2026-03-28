@@ -175,3 +175,11 @@ async def get_tts(text: str):
         raise HTTPException(status_code=500, detail="Failed to generate audio")
         
     return FileResponse(result_path, media_type="audio/wav")
+
+@router.get("/audio/{filename}")
+async def get_audio_file(filename: str):
+    safe_name = os.path.basename(filename)
+    file_path = os.path.join(settings.AUDIO_DIR, safe_name)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    return FileResponse(file_path, media_type="audio/wav")

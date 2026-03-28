@@ -68,7 +68,11 @@ class ExerciseGenerator:
 
         filename = f"{master_settings.AUDIO_DIR}/tts_{uuid.uuid4().hex}.wav"
         audio_path = self.tts.generate_audio(exercise.audio_text, output_path=filename)
-        exercise.audio_url = audio_path
+        if audio_path:
+            basename = os.path.basename(audio_path)
+            exercise.audio_url = f"/api/dutch/audio/{basename}"
+        else:
+            exercise.audio_url = ""
         return exercise
     async def generate_by_type(self, exercise_type: str) -> ExerciseContent:
         exercise = await self.new_exercise(exercise_type)

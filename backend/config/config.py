@@ -63,7 +63,7 @@ class Settings(BaseSettings):
     COMFYUI_DIR: str = Field(default="/Volumes/comfyUI/output", env="COMFYUI_DIR")
     IMAGE_DIR: str   = Field(default=str(DATA_DIR / "images"), env="IMAGE_DIR")
     AUDIO_DIR: str   = Field(default=str(DATA_DIR / "audio"),  env="AUDIO_DIR")
-    XTTS_SPEAKER_WAV: str = Field(default=str(DATA_DIR/ "max_verstappen_dutch.wav"), env="XTTS_SPEAKER_WAV")
+    XTTS_SPEAKER_WAV: str = Field(default=str(DATA_DIR/ "max_verstappen_final.wav"), env="XTTS_SPEAKER_WAV")
 
     # Load from the project root .env
     model_config = SettingsConfigDict(
