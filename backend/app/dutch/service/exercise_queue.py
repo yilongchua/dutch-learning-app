@@ -73,7 +73,8 @@ class DutchExerciseQueueService:
         async with self._refill_lock:
             for exercise_type in EXERCISE_TYPES:
                 pending_count = self._count_pending(exercise_type)
-                missing = max(0, MIN_PENDING_PER_TYPE - pending_count)
+                missing = max(0, MIN_PENDING_PER_TYPE - pending_count) + 10
+                print(f"start refill, {missing} {exercise_type}")
                 for _ in range(missing):
                     try:
                         await self.generator.generate_by_type(exercise_type)

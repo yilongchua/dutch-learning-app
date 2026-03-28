@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { getExercise, generateTheme } from '~/services/dutchApi';
+import { resolveApiBaseUrl, resolveMediaBaseUrl } from '~/services/apiConfig';
 import { useDutchSession } from '~/context/dutchSession';
 import { Play, Pause, CheckCircle, AlertCircle, RefreshCcw } from 'lucide-react';
 import type { Route } from './+types/dutch.listening';
@@ -41,6 +42,25 @@ export default function ListeningPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const dutchApiBase = resolveApiBaseUrl(
+    import.meta.env.VITE_DUTCH_API_URL as string | undefined,
+    '/api/dutch'
+  );
+  const audioBase =
+    dutchApiBase.replace(/\/api\/dutch\/?$/i, '') ||
+    resolveMediaBaseUrl(import.meta.env.VITE_MEDIA_BASE_URL as string | undefined);
+
+  const toAbsoluteAudioUrl = (value: string) => {
+    if (!value) return '';
+    if (/^https?:\/\//i.test(value)) return value;
+    if (value.startsWith('/')) return `${audioBase}${value}`;
+    return `${audioBase}/${value}`;
+  };
+
+  const withZrokBypass = (value: string) => {
+    if (!value) return '';
+    return `${value}${value.includes('?') ? '&' : '?'}skip_zrok_interstitial=true`;
+  };
 
   const fetchNewExercise = async (ignoreCache = false) => {
     setLoading(true);
@@ -58,12 +78,13 @@ export default function ListeningPage() {
       const normalizedAudioUrl = rawAudioUrl
         ? (rawAudioUrl.startsWith('/api/') ? rawAudioUrl : `/api/dutch/audio/${rawAudioUrl.split('/').pop()}`)
         : '';
+      const resolvedAudioUrl = withZrokBypass(toAbsoluteAudioUrl(normalizedAudioUrl));
       const mapped = {
         id: data.id,
         theme: data.theme || theme,
         audio_text: exerciseData.audio_text || '',
         audio_translation: exerciseData.audio_translation || '',
-        audio_url: normalizedAudioUrl,
+        audio_url: resolvedAudioUrl,
         questions: Array.isArray(exerciseData.questions) ? exerciseData.questions : [],
       };
       setCurrentTheme(mapped.theme || theme);
