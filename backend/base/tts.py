@@ -41,12 +41,12 @@ class XTTSv2Service:
                                                       BaseDatasetConfig, BaseAudioConfig, BaseTrainingConfig])
             
             self.tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(self.device)
+            print("XTTSv2Service: Model loaded.")
         except Exception as e:
             print(f"XTTSv2Service: Error during model initialization: {e}")
             import traceback
             traceback.print_exc()
-
-        print("XTTSv2Service: Model loaded.")
+            print("XTTSv2Service: Initialization failed — TTS will be unavailable.")
 
     def generate(self, text: str, output_path: str) -> bool:
         try:

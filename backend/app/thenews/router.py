@@ -39,28 +39,20 @@ async def trigger_generation(background_tasks: BackgroundTasks):
     return {"status": "started", "message": "Content generation pipeline is running in the background."}
 
 @router.get("/image")
-def get_news_image(img_path: str = Query(..., description="Absolute or /images path from images_info")):
-    """
-    Serve a generated TheNews image by path.
-    Accepts:
-    - absolute paths under COMFYUI_DIR / IMAGE_DIR
-    - /images/<relative> paths (resolved under IMAGE_DIR)
-    """
-    candidate: Path
-    if img_path.startswith("/images/"):
-        relative = img_path[len("/images/"):]
-        candidate = Path(settings.IMAGE_DIR) / relative
-    else:
-        candidate = Path(img_path)
-
-    try:
-        candidate_resolved = candidate.resolve(strict=True)
-    except Exception:
-        raise HTTPException(status_code=404, detail="Image not found")
-
+def get_news_image(img_path: str = Query(..., description="Absolute path to the image stored in COMFYUI_DIR or IMAGE_DIR")):
+    """Serve a generated TheNews image directly from the absolute DB path."""
+    candidate = Path(img_path)
     comfy_root = Path(settings.COMFYUI_DIR).resolve()
     image_root = Path(settings.IMAGE_DIR).resolve()
-    if not (str(candidate_resolved).startswith(str(comfy_root)) or str(candidate_resolved).startswith(str(image_root))):
+
+    if not candidate.exists():
+        raise HTTPException(status_code=404, detail="Image not found")
+
+    candidate_resolved = candidate.resolve()
+    # Allow if it starts with either root
+    is_safe = str(candidate_resolved).startswith(str(comfy_root)) or str(candidate_resolved).startswith(str(image_root))
+    
+    if not is_safe:
         raise HTTPException(status_code=403, detail="Image path is outside allowed directories")
 
     return FileResponse(str(candidate_resolved))

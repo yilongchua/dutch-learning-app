@@ -23,7 +23,7 @@ class ContentGenerator:
         self.theme_file = theme_file
         print(self.theme_file)
         init_db()
-        self.num_questions : int= 1
+        self.num_questions : int= 3
         self.article_length : int= 4
         self.web_search = WebSearchService()
         self.llm = LocalLLMService()
