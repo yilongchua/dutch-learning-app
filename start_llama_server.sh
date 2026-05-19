@@ -18,7 +18,7 @@ echo "-----------------------------------------------------------------"
 cd /Users/ryan_chua/Desktop/llama.cpp/build/bin || exit
 
 ./llama-server \
-  -m /Users/ryan_chua/.lmstudio/models/lmstudio-community/gpt-oss-120b-GGUF/gpt-oss-120b-MXFP4-00001-of-00002.gguf \
+  -m /Users/.lmstudio/models/lmstudio-community/gpt-oss-120b-GGUF/gpt-oss-120b-MXFP4-00001-of-00002.gguf \
   --host 0.0.0.0 \
   --port ${PORT} \
   --n-gpu-layers 999 \
